@@ -11,8 +11,8 @@ app = Flask(__name__)
 # Conexión a MongoDB Atlas
 MONGODB_URI = os.getenv('MONGODB_URI')
 client = MongoClient(MONGODB_URI)
-db = client['chistes']  # Nombre de MONGODB_URI=mongodb+srv://tu_usuario:tu_contraseña@cluster.mongodb.net/chistes?retryWrites=true&w=majoritytu base de datos
-chistes_collection = db['chistes']  # Colección de chistes
+db = client['mongodb+srv://Said_Ramirez:<db_password>@escuela.5rt7g7m.mongodb.net/?appName=Escuela']
+chistes_collection = db['escuela']  # Colección de chistes
 
 @app.route('/')
 def home():
