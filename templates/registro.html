@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}Registro | Red Black{% endblock %}
+
+{% block content %}
+<div class="card shadow-lg p-4" style="background-color: #111; border: 1px solid #333; border-top: 5px solid #ff0000; width: 28rem; border-radius: 0;">
+    <div class="card-body">
+        <div class="text-center mb-4">
+             <div style="font-size: 40px; color: #ff0000;">➕</div>
+             <h2 class="fw-bold text-uppercase">Crear <span class="text-red">Cuenta</span></h2>
+        </div>
+
+        <form action="/registro" method="POST">
+            <div class="mb-3">
+                <input type="text" name="nombre" class="form-control bg-dark text-white border-secondary" placeholder="NOMBRE COMPLETO" style="border-radius: 0;" required>
+            </div>
+            <div class="mb-3">
+                <input type="email" name="email" class="form-control bg-dark text-white border-secondary" placeholder="CORREO ELECTRÓNICO" style="border-radius: 0;" required>
+            </div>
+            <div class="mb-3">
+                <input type="password" name="password" class="form-control bg-dark text-white border-secondary" placeholder="CONTRASEÑA" style="border-radius: 0;" required>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-6">
+                    <select name="genero" class="form-select bg-dark text-white border-secondary" style="border-radius: 0;">
+                        <option value="Masculino">MASCULINO</option>
+                        <option value="Femenino">FEMENINO</option>
+                        <option value="Otro">OTRO</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <input type="date" name="fecha_nac" class="form-control bg-dark text-white border-secondary" style="border-radius: 0;" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn bg-red w-100 fw-bold py-2 mt-3 text-white text-uppercase" style="border-radius: 0;">Registrarme Ahora</button>
+        </form>
+        
+        <div class="text-center mt-3">
+            <a href="/" class="text-muted small text-decoration-none">¿YA TIENES CUENTA? ENTRAR</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
