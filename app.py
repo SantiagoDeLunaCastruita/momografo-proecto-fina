@@ -1,22 +1,22 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
-from bson.objectid import ObjectId
 
 load_dotenv()
 
 app = Flask(__name__)
 
-# Conexión a MongoDB Atlas
-MONGODB_URI = os.getenv('MONGODB_URI')
-client = MongoClient(MONGODB_URI)
-db = client['mongodb+srv://Said_Ramirez:<db_password>@escuela.5rt7g7m.mongodb.net/?appName=Escuela']
-chistes_collection = db['escuela']  # Colección de chistes
+# Conexión a MongoDB
+client = MongoClient(os.getenv('MONGODB_URI'))
+db = client['chistes']
 
 @app.route('/')
 def home():
-    return render_template('base.html')
+    return render_template('layout.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 @app.route('/api/chistes', methods=['GET'])
 def obtener_chistes():
