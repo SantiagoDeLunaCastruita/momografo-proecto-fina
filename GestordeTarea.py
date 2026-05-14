@@ -2,12 +2,15 @@ from flask import Flask, render_template, request, redirect, url_for, session, g
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://127.0.0.1:27017/')
+MONGODB_URI = os.getenv('mongodb+srv://<usuario>:NfT1w9CGzgETVGuV@Escuela.mongodb.net/gestor_tareas?retryWrites=true&w=majority', 'mongodb://127.0.0.1:27017/')
 client = MongoClient(MONGODB_URI)
 
 app = Flask(__name__)
@@ -21,7 +24,7 @@ def get_db():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('pagina_de_inicio.html')
 
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
@@ -57,7 +60,7 @@ def inicio_sesion():
 @app.route('/tareas')
 def ver_tareas():
     if 'usuario_id' not in session: return redirect(url_for('index'))
-    return "<h1>Bienvenido al Panel Rojo y Negro</h1>"
+    return "<h1>Bienvenido</h1>"
 
 if __name__ == '__main__':
     app.run(debug=True)

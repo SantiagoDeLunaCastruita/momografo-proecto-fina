@@ -1,25 +1,25 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
 
-{% block title %}Login | Red Black{% endblock %}
+{% block title %}Inicio de sesión | Momografo{% endblock %}
 
 {% block content %}
-<div class="card shadow-lg p-4" style="background-color: #111; border: 1px solid #333; border-top: 5px solid #ff0000; width: 24rem; border-radius: 0;">
+<div class="card shadow-lg p-4" style="background-color: #111; border: 1px solid #333; border-top: 5px solid #ff0000; width: 24rem; border-radius: 0; margin: 0 auto;">
     <div class="card-body">
         <div class="text-center mb-4">
              <div style="font-size: 50px;">🔺</div>
-             <h2 class="fw-bold">INICIAR <span class="text-red">SESIÓN</span></h2>
+             <h2 class="fw-bold">INICIAR <span class="text-danger">SESIÓN</span></h2>
         </div>
 
         <form action="/sesion" method="POST">
             <div class="mb-3">
                 <label class="form-label small text-muted text-uppercase fw-bold">Email</label>
-                <input type="email" name="email" class="form-control bg-light text-white border-secondary" style="border-radius: 0;" required>
+                <input type="email" name="email" class="form-control bg-light text-dark border-secondary" style="border-radius: 0;" required>
             </div>
             <div class="mb-3">
                 <label class="form-label small text-muted text-uppercase fw-bold">Contraseña</label>
-                <input type="password" name="password" class="form-control bg-light text-white border-secondary" style="border-radius: 0;" required>
+                <input type="password" name="password" class="form-control bg-light text-dark border-secondary" style="border-radius: 0;" required>
             </div>
-            <button type="submit" class="btn bg-red w-100 fw-bold py-2 mt-3 text-white" style="border-radius: 0;">ENTRAR</button>
+            <button type="submit" class="btn btn-danger w-100 fw-bold py-2 mt-3 text-white" style="border-radius: 0;">ENTRAR</button>
         </form>
     </div>
 </div>
