@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, g
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
+from pymongo.server_api import ServerApi
 import os
 
 try:
@@ -10,9 +11,18 @@ try:
 except ImportError:
     pass
 
-MONGODB_URI = os.getenv('mongodb+srv://<usuario>:NfT1w9CGzgETVGuV@Escuela.mongodb.net/gestor_tareas?retryWrites=true&w=majority', 'mongodb://127.0.0.1:27017/')
-client = MongoClient(MONGODB_URI)
 
+uri = "mongodb+srv://Said_Ramirez:<db_password>@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=ServerApi('1'))
+# Send a ping to confirm a successful connection
+try:
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
+    
+    
 app = Flask(__name__)
 app.secret_key = 'red_black_2026'
 

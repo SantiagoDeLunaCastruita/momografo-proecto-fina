@@ -6,23 +6,34 @@
 <div class="card shadow-lg p-4" style="background-color: #111; border: 1px solid #333; border-top: 5px solid #ff0000; width: 28rem; border-radius: 0; margin: 0 auto;">
     <div class="card-body">
         <div class="text-center mb-4">
-             <div style="font-size: 40px; color: #ff0000;">➕</div>
+             <div style="font-size: 40px; color: #ff0000;">Crear cuenta</div>
              <h2 class="fw-bold text-uppercase">Crear <span class="text-danger">Cuenta</span></h2>
         </div>
 
         <form action="/registro" method="POST">
             <div class="mb-3">
+                <label class="form-label text-muted small">Nombre completo</label>
                 <input type="text" name="nombre" class="form-control bg-dark text-white border-secondary" placeholder="NOMBRE COMPLETO" style="border-radius: 0;" required>
+                <div class="form-text text-white-50">Ingresa tu nombre y apellido para identificar tu cuenta.</div>
             </div>
             <div class="mb-3">
+                <label class="form-label text-muted small">Correo electrónico</label>
                 <input type="email" name="email" class="form-control bg-dark text-white border-secondary" placeholder="CORREO ELECTRÓNICO" style="border-radius: 0;" required>
+                <div class="form-text text-white-50">Usa un correo válido para iniciar sesión o recuperar tu cuenta.</div>
             </div>
             <div class="mb-3">
+                <label class="form-label text-muted small">Contraseña</label>
                 <input type="password" name="password" class="form-control bg-dark text-white border-secondary" placeholder="CONTRASEÑA" style="border-radius: 0;" required>
+                <div class="form-text text-white-50">Escoge una contraseña segura de al menos 6 caracteres.</div>
             </div>
-            
+            <div class="mb-3">
+                <label class="form-label text-muted small">Confirma tu contraseña</label>
+                <input type="password" name="confirm_password" class="form-control bg-dark text-white border-secondary" placeholder="CONFIRMAR CONTRASEÑA" style="border-radius: 0;" required>
+                <div class="form-text text-white-50">Escribe de nuevo tu contraseña para asegurarte de que coincida.</div>
+            </div>
             <div class="row mb-3">
                 <div class="col-6">
+                    <label class="form-label text-muted small">Género</label>
                     <select name="genero" class="form-select bg-dark text-white border-secondary" style="border-radius: 0;">
                         <option value="Masculino">MASCULINO</option>
                         <option value="Femenino">FEMENINO</option>
@@ -30,6 +41,7 @@
                     </select>
                 </div>
                 <div class="col-6">
+                    <label class="form-label text-muted small">Fecha de nacimiento</label>
                     <input type="date" name="fecha_nac" class="form-control bg-dark text-white border-secondary" style="border-radius: 0;" required>
                 </div>
             </div>
