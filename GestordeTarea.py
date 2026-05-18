@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 
-uri = "mongodb+srv://Said_Ramirez:<db_password>@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
+uri = "mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
 # Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 # Send a ping to confirm a successful connection
