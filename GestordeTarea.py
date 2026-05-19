@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from pymongo.server_api import ServerApi
 import os
+from flask_mail import Mail, Message
 
 try:
     from dotenv import load_dotenv
@@ -25,6 +26,16 @@ except Exception as e:
     
 app = Flask(__name__)
 app.secret_key = 'red_black_2026'
+
+# Configurar Mail ANTES de las rutas
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.sendgrid.net')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+mail = Mail(app)
 
 def get_db():
     if 'db' not in g:
@@ -79,6 +90,27 @@ def logout():
 def ver_tareas():
     if 'usuario_id' not in session: return redirect(url_for('index'))
     return "<h1>Bienvenido</h1>"
+
+@app.route('/recuperar', methods=['GET', 'POST'])
+def recuperar_contrasena():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        db = get_db()
+        user = db.usuarios.find_one({"email": email})
+        
+        if user:
+            try:
+                msg = Message('Recuperar contraseña', sender=os.getenv('MAIL_DEFAULT_SENDER'), recipients=[email])
+                msg.body = f'Hola {user["nombre"]},\n\nTu contraseña es: {user["password"]}\n\nNo compartas esto con nadie.'
+                mail.send(msg)
+                return "Correo enviado correctamente. Revisa tu bandeja de entrada."
+            except Exception as e:
+                return f"Error al enviar el correo: {str(e)}"
+        else:
+            return "El correo no existe en nuestro sistema."
+    
+    return render_template('recuperar.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)

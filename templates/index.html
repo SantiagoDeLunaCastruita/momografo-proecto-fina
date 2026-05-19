@@ -3,30 +3,31 @@
 {% block title %}Inicio de sesión | Momografo{% endblock %}
 
 {% block content %}
-<div class="card shadow-lg p-4" style="background-color: #111; border: 1px solid #333; border-top: 5px solid #ff0000; width: 24rem; border-radius: 0; margin: 0 auto;">
+<div class="card shadow-lg p-4 bg-dark rounded-0 border border-danger mx-auto" style="width: 24rem; border-top: 5px solid #ff0000;">
     <div class="card-body">
         <div class="text-center mb-4">
-             <div style="font-size: 50px;">🔺</div>
+             <div class="fs-1">🔺</div>
              <h2 class="fw-bold text-light">INICIAR <span class="text-danger">SESIÓN</span></h2>
         </div>
 
         <form action="/sesion" method="POST">
             <div class="mb-3">
                 <label class="form-label small text-light text-uppercase fw-bold">Email</label>
-                <input type="email" name="email" class="form-control bg-light text-dark border-secondary" style="border-radius: 0;" required>
+                <input type="email" name="email" class="form-control bg-light text-dark border-secondary rounded-0" required>
             </div>
             <div class="mb-3">
                 <label class="form-label small text-light text-uppercase fw-bold">Contraseña</label>
-                <input type="password" name="password" class="form-control bg-light text-dark border-secondary" style="border-radius: 0;" required>
+                <input type="password" name="password" class="form-control bg-light text-dark border-secondary rounded-0" required>
             </div>
-            <button type="submit" class="btn btn-danger w-100 fw-bold py-2 mt-3 text-white" style="border-radius: 0;">ENTRAR</button>
+            <button type="submit" class="btn btn-danger w-100 fw-bold py-2 mt-3 text-white rounded-0">ENTRAR</button>
         </form>
 
         <hr class="border-secondary mt-4">
 
         <div class="text-center mt-3">
             <p class="text-white-50 small mb-3">¿No tienes cuenta?</p>
-            <a href="/registro" class="btn btn-outline-danger w-100 fw-bold py-2 text-white text-uppercase" style="border-radius: 0;">Crear Cuenta</a>
+            <a href="/registro" class="btn btn-outline-danger w-100 fw-bold py-2 text-white text-uppercase rounded-0 mb-2">Crear Cuenta</a>
+            <a href="/recuperar" class="btn btn-outline-light w-100 fw-bold py-2 text-white text-uppercase rounded-0">Recuperar contraseña</a>
         </div>
     </div>
 </div>
