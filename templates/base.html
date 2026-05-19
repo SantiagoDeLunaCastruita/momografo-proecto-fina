@@ -15,10 +15,29 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item"><a class="nav-link text-white" href="/">Inicio</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/registro">Registro</a></li>
-                </ul>
+                {% if session.get('usuario_nombre') %}
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link text-white" href="/">Inicio</a></li>
+                    </ul>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ session.get('usuario_nombre') }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                            <li><a class="dropdown-item" href="/logout">Cerrar sesión</a></li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <div class="dropdown ms-auto">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="authMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            Acceder
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="authMenuButton">
+                            <li><a class="dropdown-item" href="/login">Iniciar sesión</a></li>
+                            <li><a class="dropdown-item" href="/registro">Crear cuenta</a></li>
+                        </ul>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </nav>

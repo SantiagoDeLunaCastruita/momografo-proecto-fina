@@ -36,6 +36,10 @@ def get_db():
 def index():
     return render_template('pagina_de_inicio.html')
 
+@app.route('/login')
+def login():
+    return render_template('index.html')
+
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
@@ -53,7 +57,6 @@ def registro():
     
     return render_template('registro.html')
 
-# --- RUTA DE SESIÓN ---
 @app.route('/sesion', methods=['POST'])
 def inicio_sesion():
     db = get_db()
@@ -64,8 +67,13 @@ def inicio_sesion():
     if user:
         session['usuario_id'] = str(user['_id'])
         session['usuario_nombre'] = user['nombre']
-        return redirect(url_for('ver_tareas'))
-    return redirect(url_for('index'))
+        return redirect(url_for('index'))
+    return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/tareas')
 def ver_tareas():
