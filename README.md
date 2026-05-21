@@ -8,3 +8,5 @@ Santiago De Luna Castruita 4-D
 
 Said Alejandro Ramirez Chavez  4-D
 24308060610069  
+
+<img width="300" height="400" alt="image" src="https://github.com/user-attachments/assets/69583437-794a-48cc-a61c-90e767ae9e12" />
