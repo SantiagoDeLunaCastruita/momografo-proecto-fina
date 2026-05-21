@@ -16,8 +16,14 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 {% if session.get('usuario_nombre') %}
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                        <li class="nav-item"><a class="nav-link text-white" href="/">Inicio</a></li>
+                    <ul class="navbar-nav mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link text-white" href="/">ver chistes</a></li>
+                    </ul>
+                    <ul class="navbar-nav mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link text-white" href="/">ver humor oscuro</a></li>
+                    </ul>
+                    <ul class="navbar-nav  mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link text-white" href="/">Crea tus chistes</a></li>
                     </ul>
                     <div class="dropdown">
                         <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
