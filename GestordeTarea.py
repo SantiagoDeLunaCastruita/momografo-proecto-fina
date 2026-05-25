@@ -111,6 +111,147 @@ def get_db():
     return g.db
 
 
+def normalizar_etiqueta(valor):
+    return ' '.join(valor.strip().lower().split())
+
+
+def parsear_etiquetas(valor):
+    etiquetas = []
+    for parte in valor.split(','):
+        etiqueta = normalizar_etiqueta(parte)
+        if etiqueta and etiqueta not in etiquetas:
+            etiquetas.append(etiqueta)
+    return etiquetas
+
+
+def asegurar_etiquetas(db, etiquetas):
+    for etiqueta in etiquetas:
+        db.etiquetas.update_one(
+            {'nombre': etiqueta},
+            {'$setOnInsert': {'nombre': etiqueta, 'creado_en': datetime.now()}},
+            upsert=True
+        )
+
+
+def obtener_etiquetas(db):
+    return [item['nombre'] for item in db.etiquetas.find().sort('nombre', 1)]
+
+
+@app.route('/crear_chiste', methods=['GET', 'POST'])
+def crear_chiste():
+    db = get_db()
+
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        contenido = request.form.get('contenido', '').strip()
+        etiquetas = parsear_etiquetas(request.form.get('etiquetas', ''))
+
+        if not contenido:
+            return render_template('crear_chiste.html', error='Escribe el chiste antes de guardarlo.', etiquetas=obtener_etiquetas(db))
+
+        if not etiquetas:
+            return render_template('crear_chiste.html', error='Agrega al menos una etiqueta para guardar el chiste.', etiquetas=obtener_etiquetas(db))
+
+        asegurar_etiquetas(db, etiquetas)
+
+        db.chistes.insert_one({
+            'contenido': contenido,
+            'tipo_humor': request.form.get('tipo_humor', 'General'),
+            'temas': etiquetas,
+            'autor_id': session.get('usuario_id'),
+            'autor_nombre': session.get('usuario_nombre'),
+            'creado_en': datetime.now(),
+        })
+
+        return redirect(url_for('ver_chistes'))
+
+    return render_template('crear_chiste.html', etiquetas=obtener_etiquetas(db))
+
+
+@app.route('/tus_chistes', methods=['GET', 'POST'])
+def tus_chistes():
+    db = get_db()
+
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        chiste_id = request.form.get('chiste_id')
+
+        try:
+            objeto = ObjectId(chiste_id)
+        except Exception:
+            return redirect(url_for('tus_chistes'))
+
+        chiste = db.chistes.find_one({'_id': objeto, 'autor_id': session['usuario_id']})
+        if not chiste:
+            return redirect(url_for('tus_chistes'))
+
+        if action == 'delete':
+            db.chistes.delete_one({'_id': objeto})
+            return redirect(url_for('tus_chistes'))
+
+        if action == 'update':
+            contenido = request.form.get('contenido', '').strip()
+            etiquetas = parsear_etiquetas(request.form.get('etiquetas', ''))
+
+            if not contenido or not etiquetas:
+                return redirect(url_for('tus_chistes'))
+
+            asegurar_etiquetas(db, etiquetas)
+            db.chistes.update_one(
+                {'_id': objeto},
+                {'$set': {
+                    'contenido': contenido,
+                    'tipo_humor': request.form.get('tipo_humor', 'General'),
+                    'temas': etiquetas,
+                }}
+            )
+
+        return redirect(url_for('tus_chistes'))
+
+    chistes = list(db.chistes.find({'autor_id': session['usuario_id']}).sort('creado_en', -1))
+    return render_template('tus_chistes.html', chistes=chistes)
+
+
+@app.route('/ver_chistes')
+def ver_chistes():
+    db = get_db()
+    query = {}
+
+    busqueda = request.args.get('q', '').strip()
+    tipo_humor = request.args.get('humor', '').strip()
+    etiqueta = normalizar_etiqueta(request.args.get('tag', ''))
+
+    if busqueda:
+        query['$or'] = [
+            {'contenido': {'$regex': busqueda, '$options': 'i'}},
+            {'autor_nombre': {'$regex': busqueda, '$options': 'i'}},
+            {'temas': {'$regex': busqueda, '$options': 'i'}},
+        ]
+
+    if tipo_humor and tipo_humor != 'Todos':
+        query['tipo_humor'] = tipo_humor
+
+    if etiqueta:
+        query['temas'] = etiqueta
+
+    chistes = list(db.chistes.find(query).sort('creado_en', -1))
+    etiquetas = obtener_etiquetas(db)
+
+    return render_template(
+        'ver_chistes.html',
+        chistes=chistes,
+        etiquetas=etiquetas,
+        search=busqueda,
+        selected_humor=tipo_humor or 'Todos',
+        selected_tag=etiqueta,
+    )
+
+
 @app.route('/')
 def index():
     return render_template('pagina_de_inicio.html')
