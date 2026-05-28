@@ -18,7 +18,6 @@ except ImportError:
     pass
 
 
-uri = "mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
 # Create a new client and connect to the server
 client = MongoClient(uri, server_api=ServerApi('1'))
 # Send a ping to confirm a successful connection
@@ -42,7 +41,7 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_DEBUG'] = True
 
-# enable basic logging so we can see SMTP/Flask-Mail debug output
+
 logging.basicConfig(level=logging.DEBUG)
 
 mail = Mail(app)
