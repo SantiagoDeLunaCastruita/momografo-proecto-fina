@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Chistes | Momografo{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h1 class="text-white mb-1">Chistes publicados</h1>
+            <p class="text-light mb-0">Filtra por texto, tipo de humor o etiqueta para encontrar el chiste que buscas.</p>
+        </div>
+        <a href="/crear_chiste" class="btn btn-danger">Crear otro chiste</a>
+    </div>
+</div>
+
+<div class="card bg-secondary bg-opacity-10 border border-danger mb-4">
+    <div class="card-body">
+        <form method="GET" action="/ver_chistes" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="q" class="form-label text-light">Buscar</label>
+                <input id="q" name="q" type="text" class="form-control bg-dark text-white border-secondary" placeholder="Buscar por texto, autor o etiqueta" value="{{ search or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="humor" class="form-label text-light">Tipo de humor</label>
+                <select id="humor" name="humor" class="form-select bg-dark text-white border-secondary">
+                    <option value="Todos" {% if selected_humor == 'Todos' %}selected{% endif %}>Todos</option>
+                    <option value="General" {% if selected_humor == 'General' %}selected{% endif %}>General</option>
+                    <option value="Observacional" {% if selected_humor == 'Observacional' %}selected{% endif %}>Observacional</option>
+                    <option value="Doble sentido" {% if selected_humor == 'Doble sentido' %}selected{% endif %}>Doble sentido</option>
+                    <option value="Negro" {% if selected_humor == 'Negro' %}selected{% endif %}>Negro</option>
+                    <option value="Sarcástico" {% if selected_humor == 'Sarcástico' %}selected{% endif %}>Sarcástico</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="tag" class="form-label text-light">Etiqueta</label>
+                <select id="tag" name="tag" class="form-select bg-dark text-white border-secondary">
+                    <option value="">Todas las etiquetas</option>
+                    {% for etiqueta in etiquetas %}
+                        <option value="{{ etiqueta }}" {% if selected_tag == etiqueta %}selected{% endif %}>{{ etiqueta }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-danger w-100">Filtrar</button>
+                <a href="/ver_chistes" class="btn btn-outline-light w-100">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if chistes|length == 0 %}
+    <div class="card bg-secondary bg-opacity-10 border border-secondary">
+        <div class="card-body text-center py-5">
+            <h2 class="text-white">No hay chistes con esos filtros</h2>
+            <p class="text-light mb-4">Prueba cambiar la búsqueda o añade una nueva etiqueta desde el formulario de creación.</p>
+            <a href="/crear_chiste" class="btn btn-outline-light">Crear chiste</a>
+        </div>
+    </div>
+{% else %}
+    <div class="row g-4">
+        {% for chiste in chistes %}
+            <div class="col-lg-6">
+                <div class="card bg-secondary bg-opacity-10 border border-danger h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between gap-3 mb-3">
+                            <span class="badge bg-danger">{{ chiste.tipo_humor }}</span>
+                            <small class="text-white-50">
+                                {{ chiste.creado_en.strftime('%d/%m/%Y %H:%M') if chiste.creado_en else 'Sin fecha' }}
+                            </small>
+                        </div>
+
+                        <p class="text-white mb-4" style="white-space: pre-line;">{{ chiste.contenido }}</p>
+
+                        <div class="mb-3">
+                            <p class="text-white-50 mb-1">Creado por</p>
+                            <p class="text-white mb-0">{{ chiste.autor_nombre or 'Usuario desconocido' }}</p>
+                        </div>
+
+                        <div>
+                            <p class="text-white-50 mb-2">Etiquetas</p>
+                            {% if chiste.temas %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for tema in chiste.temas %}
+                                        <span class="badge bg-light text-dark">{{ tema }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-white-50 mb-0">Sin etiquetas</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}
