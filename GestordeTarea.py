@@ -19,6 +19,7 @@ except ImportError:
 
 
 # Create a new client and connect to the server
+uri = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI') or 'mongodb://localhost:27017'
 client = MongoClient(uri, server_api=ServerApi('1'))
 # Send a ping to confirm a successful connection
 try:
