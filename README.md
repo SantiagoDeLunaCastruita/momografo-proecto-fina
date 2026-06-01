@@ -5,6 +5,7 @@ trabajo final de la unida tres
 
 Santiago De Luna Castruita 4-D
 25308060610637
+<img width="125" height="189" alt="f2" src="https://github.com/user-attachments/assets/38809597-7469-4b67-9ccb-2d9e5f73fe2a" />
 
 Said Alejandro Ramirez Chavez  4-D
 24308060610069  
