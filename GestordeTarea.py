@@ -3,14 +3,17 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
 from pymongo.server_api import ServerApi
-import os
 
-# Cargar variables de entorno PRIMERO
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+# Configuración fija en el código
+MONGODB_URI = "mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
+MAIL_SERVER = "smtp.sendgrid.net"
+MAIL_PORT = 587
+MAIL_USE_TLS = True
+MAIL_USERNAME = "apikey"
+MAIL_PASSWORD = "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"
+MAIL_DEFAULT_SENDER = "wikakax871@doreact.com"
+MAIL_USE_SSL = False
+NGROK_AUTHTOKEN = "3EXLGEPWW3aKirczcaRQUl9X6IK_82NWY7cc6HAKoQXS1vvnn"
 
 from flask_mail import Mail, Message
 import logging
@@ -22,7 +25,7 @@ from pyngrok import ngrok
 
 
 # Create a new client and connect to the server
-uri = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI') or 'mongodb://localhost:27017'
+uri = MONGODB_URI
 client = MongoClient(uri, server_api=ServerApi('1'))
 # Send a ping to confirm a successful connection
 try:
@@ -36,13 +39,13 @@ app = Flask(__name__)
 app.secret_key = 'red_black_2026'
 
 # Configurar Mail ANTES de las rutas
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'u107765140.wl141.sendgrid.net')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_SERVER'] = MAIL_SERVER
+app.config['MAIL_PORT'] = MAIL_PORT
+app.config['MAIL_USE_TLS'] = MAIL_USE_TLS
+app.config['MAIL_USERNAME'] = MAIL_USERNAME
+app.config['MAIL_PASSWORD'] = MAIL_PASSWORD
+app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
+app.config['MAIL_USE_SSL'] = MAIL_USE_SSL
 app.config['MAIL_DEBUG'] = True
 
 
@@ -67,14 +70,11 @@ def confirm_reset_token(token, expiration=3600):
 
 
 def test_smtp_connection():
-    host = os.getenv('MAIL_SERVER', 'smtp.sendgrid.net')
-    port = int(os.getenv('MAIL_PORT', 587))
-    username = os.getenv('MAIL_USERNAME')
-    password = os.getenv('MAIL_PASSWORD')
-    use_ssl_env = os.getenv('MAIL_USE_SSL')
-    use_ssl = False
-    if use_ssl_env is not None:
-        use_ssl = str(use_ssl_env).lower() in ('1', 'true', 'yes')
+    host = MAIL_SERVER
+    port = MAIL_PORT
+    username = MAIL_USERNAME
+    password = MAIL_PASSWORD
+    use_ssl = MAIL_USE_SSL
 
     buf = io.StringIO()
     try:
@@ -314,7 +314,7 @@ def recuperar_contrasena():
             try:
                 token = generate_reset_token(email)
                 reset_url = url_for('reset_password', token=token, _external=True)
-                msg = Message('Restablece tu contraseña', sender=os.getenv('MAIL_DEFAULT_SENDER'), recipients=[email])
+                msg = Message('Restablece tu contraseña', sender=MAIL_DEFAULT_SENDER, recipients=[email])
                 msg.body = f'Hola {user["nombre"]},\n\nHaz clic en el siguiente enlace para cambiar tu contraseña:\n{reset_url}\n\nSi no solicitaste esto, ignora este mensaje.'
                 msg.html = f"""
                     <p>Hola {user['nombre']},</p>
@@ -347,12 +347,9 @@ def reset_password(token):
 
 
 if __name__ == '__main__':
-    # Configurar token de ngrok desde .env
-    auth_token = os.getenv('NGROK_AUTHTOKEN')
-    if auth_token:
-        ngrok.set_auth_token(auth_token)
+    # Configurar token de ngrok directamente en el código
+    ngrok.set_auth_token(NGROK_AUTHTOKEN)
     
-    # Para usar ngrok, descomenta la siguiente línea:
     public_url = ngrok.connect(5000)
     print(f"Tu URL pública es: {public_url}")
     
