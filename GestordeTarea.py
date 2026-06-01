@@ -4,18 +4,21 @@ from bson.objectid import ObjectId
 from datetime import datetime
 from pymongo.server_api import ServerApi
 import os
+
+# Cargar variables de entorno PRIMERO
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from flask_mail import Mail, Message
 import logging
 import smtplib
 import traceback
 import io
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+from pyngrok import ngrok
 
 
 # Create a new client and connect to the server
@@ -344,8 +347,13 @@ def reset_password(token):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Configurar token de ngrok desde .env
+    auth_token = os.getenv('NGROK_AUTHTOKEN')
+    if auth_token:
+        ngrok.set_auth_token(auth_token)
     
+    # Para usar ngrok, descomenta la siguiente línea:
+    public_url = ngrok.connect(5000)
+    print(f"Tu URL pública es: {public_url}")
     
-
-
+    app.run(debug=True, host='0.0.0.0', port=5000)

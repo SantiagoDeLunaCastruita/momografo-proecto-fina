@@ -9,6 +9,7 @@ dependencies = [
     "flask-mail>=0.10.0",
     "pymongo>=4.6.0",
     "python-dotenv>=1.0.0",
+    "pyngrok>=5.2.0",
 ]
 
 [tool.uv.workspace]
