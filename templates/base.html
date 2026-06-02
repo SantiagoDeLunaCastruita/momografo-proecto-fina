@@ -10,7 +10,11 @@
 <body class="bg-dark text-white">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-danger">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold text-danger" href="/">MOMOGRAFO</a>
+            <a class="navbar-brand fw-bold text-danger d-flex align-items-center" href="/">
+                MOMOGRAFO
+                <img src="{{ url_for('static', filename='la_grasa.jpg') }}" alt="Logo" width="40" height="40" class="ms-2 rounded">
+            </a>
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -22,7 +26,7 @@
                     <ul class="navbar-nav mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link text-white" href="/tus_chistes">Tus chistes</a></li>
                     </ul>
-                    <ul class="navbar-nav  mb-2 mb-lg-0">
+                    <ul class="navbar-nav mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link text-white" href="/crear_chiste">Crea tus chistes</a></li>
                     </ul>
                     <div class="dropdown">

@@ -6,14 +6,23 @@
     <title>Cambiar contraseña</title>
   </head>
   <body>
-    <h1>Cambiar contraseña</h1>
-    <p>Introduce tu nueva contraseña para la cuenta <strong>{{ email }}</strong>.</p>
-    <form method="post">
-      <div>
-        <label for="password">Nueva contraseña</label><br>
-        <input type="password" name="password" id="password" required>
-      </div>
-      <button type="submit">Actualizar contraseña</button>
-    </form>
+    <div style="max-width:520px;margin:40px auto;padding:20px;border:1px solid #ccc;border-radius:6px;">
+      <h1 style="margin-bottom:8px">Cambiar contraseña</h1>
+      <p>Cuenta: <strong>{{ email }}</strong></p>
+      {% if error %}
+        <div style="color:#b00020;margin-bottom:8px">{{ error }}</div>
+      {% endif %}
+      <form method="post">
+        <div style="margin-bottom:8px">
+          <label for="password">Nueva contraseña</label><br>
+          <input type="password" name="password" id="password" required style="width:100%;padding:8px;margin-top:4px">
+        </div>
+        <div style="margin-bottom:12px">
+          <label for="confirm">Confirmar contraseña</label><br>
+          <input type="password" name="confirm" id="confirm" required style="width:100%;padding:8px;margin-top:4px">
+        </div>
+        <button type="submit" style="padding:10px 16px;background:#1a73e8;color:#fff;border:none;border-radius:4px">Confirmar y volver</button>
+      </form>
+    </div>
   </body>
 </html>
