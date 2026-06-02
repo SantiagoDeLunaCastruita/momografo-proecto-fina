@@ -3,9 +3,16 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from datetime import datetime
 from pymongo.server_api import ServerApi
+from email.message import EmailMessage
+import os
+import json
+import re
+import uuid
+import copy
+from types import SimpleNamespace
 
 # Configuración fija en el código
-MONGODB_URI = "mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
+MONGODB_URI = "mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/gestor_tareas?retryWrites=true&w=majority"
 MAIL_SERVER = "smtp.sendgrid.net"
 MAIL_PORT = 587
 MAIL_USE_TLS = True
@@ -14,8 +21,9 @@ MAIL_PASSWORD = "SG.nU1rO1SnQryITIA62kMcYw.flBYRluR2wF9_K6LjANZloioBQzOoy1emJFwU
 MAIL_DEFAULT_SENDER = "wikakax871@doreact.com"
 MAIL_USE_SSL = False
 NGROK_AUTHTOKEN = "3EXLGEPWW3aKirczcaRQUl9X6IK_82NWY7cc6HAKoQXS1vvnn"
+NGROK_ENABLED = True
+MONGODB_TLS_INSECURE = True  # Cambia a False en producción si tu entorno soporta TLS correctamente
 
-from flask_mail import Mail, Message
 import logging
 import smtplib
 import traceback
@@ -26,15 +34,189 @@ from pyngrok import ngrok
 
 # Create a new client and connect to the server
 uri = MONGODB_URI
-client = MongoClient(uri, server_api=ServerApi('1'))
-# Send a ping to confirm a successful connection
+LOCAL_DB_FILE = os.path.join(os.path.dirname(__file__), 'local_database.json')
+MONGO_AVAILABLE = False
+fallback_db = None
+
+def serialize_value(value):
+    if isinstance(value, datetime):
+        return {'__datetime__': value.isoformat()}
+    if isinstance(value, dict):
+        return {k: serialize_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [serialize_value(v) for v in value]
+    return value
+
+
+def deserialize_value(value):
+    if isinstance(value, dict):
+        if '__datetime__' in value:
+            return datetime.fromisoformat(value['__datetime__'])
+        return {k: deserialize_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [deserialize_value(v) for v in value]
+    return value
+
+
+def load_local_data():
+    if not os.path.exists(LOCAL_DB_FILE):
+        return {'usuarios': [], 'chistes': [], 'etiquetas': []}
+    with open(LOCAL_DB_FILE, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return {
+        'usuarios': [deserialize_value(item) for item in data.get('usuarios', [])],
+        'chistes': [deserialize_value(item) for item in data.get('chistes', [])],
+        'etiquetas': [deserialize_value(item) for item in data.get('etiquetas', [])],
+    }
+
+
+def save_local_data(data):
+    output = {
+        'usuarios': [serialize_value(item) for item in data.get('usuarios', [])],
+        'chistes': [serialize_value(item) for item in data.get('chistes', [])],
+        'etiquetas': [serialize_value(item) for item in data.get('etiquetas', [])],
+    }
+    with open(LOCAL_DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(output, f, indent=2, ensure_ascii=False)
+
+
+class LocalCursor(list):
+    def sort(self, key, direction):
+        reverse = direction == -1
+        return LocalCursor(sorted(self, key=lambda item: item.get(key), reverse=reverse))
+
+
+class LocalCollection:
+    def __init__(self, name, store):
+        self.name = name
+        self.store = store
+        self.data = store[name]
+
+    def _save(self):
+        save_local_data(self.store)
+
+    def _normalize_id(self, value):
+        if isinstance(value, ObjectId):
+            return str(value)
+        return str(value)
+
+    def _match_value(self, doc_value, filter_value):
+        if isinstance(filter_value, ObjectId):
+            filter_value = str(filter_value)
+        if isinstance(doc_value, ObjectId):
+            doc_value = str(doc_value)
+
+        if isinstance(filter_value, dict) and '$regex' in filter_value:
+            options = filter_value.get('$options', '')
+            flags = re.IGNORECASE if 'i' in options else 0
+            regex = re.compile(filter_value['$regex'], flags)
+            if isinstance(doc_value, list):
+                return any(regex.search(str(item)) for item in doc_value)
+            return bool(regex.search(str(doc_value or '')))
+
+        if isinstance(doc_value, list):
+            return filter_value in doc_value
+
+        return doc_value == filter_value
+
+    def _match(self, doc, query):
+        if not query:
+            return True
+        for key, value in query.items():
+            if key == '$or':
+                return any(self._match(doc, item) for item in value)
+            if not self._match_value(doc.get(key), value):
+                return False
+        return True
+
+    def find(self, query=None):
+        results = [copy.deepcopy(doc) for doc in self.data if self._match(doc, query or {})]
+        return LocalCursor(results)
+
+    def find_one(self, query):
+        for doc in self.data:
+            if self._match(doc, query or {}):
+                return copy.deepcopy(doc)
+        return None
+
+    def insert_one(self, document):
+        new_doc = copy.deepcopy(document)
+        if '_id' not in new_doc:
+            new_doc['_id'] = str(uuid.uuid4())
+        self.data.append(new_doc)
+        self._save()
+        return SimpleNamespace(inserted_id=new_doc['_id'])
+
+    def delete_one(self, query):
+        for index, doc in enumerate(self.data):
+            if self._match(doc, query or {}):
+                del self.data[index]
+                self._save()
+                return SimpleNamespace(deleted_count=1)
+        return SimpleNamespace(deleted_count=0)
+
+    def update_one(self, query, update, upsert=False):
+        for doc in self.data:
+            if self._match(doc, query or {}):
+                if '$setOnInsert' in update and not self._match(doc, query or {}):
+                    pass
+                if '$set' in update:
+                    for key, value in update['$set'].items():
+                        doc[key] = value
+                self._save()
+                return SimpleNamespace(matched_count=1, modified_count=1)
+
+        if upsert:
+            new_doc = {}
+            if '$setOnInsert' in update:
+                new_doc.update(update['$setOnInsert'])
+            if '$set' in update:
+                new_doc.update(update['$set'])
+            if '_id' not in new_doc:
+                new_doc['_id'] = str(uuid.uuid4())
+            self.data.append(new_doc)
+            self._save()
+            return SimpleNamespace(upserted_id=new_doc['_id'], matched_count=0, modified_count=0)
+
+        return SimpleNamespace(matched_count=0, modified_count=0)
+
+
+class LocalDatabase:
+    def __init__(self, store):
+        self.store = store
+        self.usuarios = LocalCollection('usuarios', store)
+        self.chistes = LocalCollection('chistes', store)
+        self.etiquetas = LocalCollection('etiquetas', store)
+
+
+def create_mongo_client(uri):
+    options = {
+        'connectTimeoutMS': 30000,
+        'socketTimeoutMS': 30000,
+        'serverSelectionTimeoutMS': 30000,
+        'tls': True,
+    }
+
+    if MONGODB_TLS_INSECURE:
+        options.update({
+            'tlsAllowInvalidCertificates': True,
+            'tlsAllowInvalidHostnames': True,
+        })
+
+    client = MongoClient(uri, **options)
+    return client
+
 try:
+    client = create_mongo_client(uri)
     client.admin.command('ping')
+    MONGO_AVAILABLE = True
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
-    print(e)
-    
-    
+    logging.warning("Error connecting to MongoDB on first attempt: %s", e)
+    client = None
+    fallback_db = LocalDatabase(load_local_data())
+    print("MongoDB no disponible. Usando almacenamiento local.")
+
 app = Flask(__name__)
 app.secret_key = 'red_black_2026'
 
@@ -48,12 +230,33 @@ app.config['MAIL_DEFAULT_SENDER'] = MAIL_DEFAULT_SENDER
 app.config['MAIL_USE_SSL'] = MAIL_USE_SSL
 app.config['MAIL_DEBUG'] = True
 
-
 logging.basicConfig(level=logging.DEBUG)
 
-mail = Mail(app)
-
 serializer = URLSafeTimedSerializer(app.secret_key)
+
+
+def send_email(subject, sender, recipients, body, html=None):
+    message = EmailMessage()
+    message['Subject'] = subject
+    message['From'] = sender
+    message['To'] = ', '.join(recipients) if isinstance(recipients, (list, tuple)) else recipients
+    message.set_content(body)
+    if html:
+        message.add_alternative(html, subtype='html')
+
+    if MAIL_USE_SSL or MAIL_PORT == 465:
+        smtp_client = smtplib.SMTP_SSL(MAIL_SERVER, MAIL_PORT, timeout=20)
+    else:
+        smtp_client = smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=20)
+        smtp_client.ehlo()
+        smtp_client.starttls()
+        smtp_client.ehlo()
+
+    if MAIL_USERNAME and MAIL_PASSWORD:
+        smtp_client.login(MAIL_USERNAME, MAIL_PASSWORD)
+
+    smtp_client.send_message(message)
+    smtp_client.quit()
 
 def generate_reset_token(email):
     return serializer.dumps(email, salt='password-reset-salt')
@@ -110,7 +313,10 @@ def smtp_test_route():
 
 def get_db():
     if 'db' not in g:
-        g.db = client['gestor_tareas']
+        if MONGO_AVAILABLE and client:
+            g.db = client['gestor_tareas']
+        else:
+            g.db = fallback_db
     return g.db
 
 
@@ -183,11 +389,12 @@ def tus_chistes():
     if request.method == 'POST':
         action = request.form.get('action')
         chiste_id = request.form.get('chiste_id')
-
-        try:
-            objeto = ObjectId(chiste_id)
-        except Exception:
-            return redirect(url_for('tus_chistes'))
+        objeto = chiste_id
+        if MONGO_AVAILABLE:
+            try:
+                objeto = ObjectId(chiste_id)
+            except Exception:
+                return redirect(url_for('tus_chistes'))
 
         chiste = db.chistes.find_one({'_id': objeto, 'autor_id': session['usuario_id']})
         if not chiste:
@@ -314,15 +521,18 @@ def recuperar_contrasena():
             try:
                 token = generate_reset_token(email)
                 reset_url = url_for('reset_password', token=token, _external=True)
-                msg = Message('Restablece tu contraseña', sender=MAIL_DEFAULT_SENDER, recipients=[email])
-                msg.body = f'Hola {user["nombre"]},\n\nHaz clic en el siguiente enlace para cambiar tu contraseña:\n{reset_url}\n\nSi no solicitaste esto, ignora este mensaje.'
-                msg.html = f"""
+                body = (
+                    f'Hola {user["nombre"]},\n\n'
+                    f'Haz clic en el siguiente enlace para cambiar tu contraseña:\n{reset_url}\n\n'
+                    'Si no solicitaste esto, ignora este mensaje.'
+                )
+                html = f"""
                     <p>Hola {user['nombre']},</p>
                     <p>Haz clic en el botón para cambiar tu contraseña:</p>
                     <p><a href=\"{reset_url}\" style=\"display:inline-block;padding:12px 24px;background:#1a73e8;color:#ffffff;text-decoration:none;border-radius:4px;\">Cambiar mi contraseña</a></p>
                     <p>Si no solicitaste este cambio, ignora este mensaje.</p>
                 """
-                mail.send(msg)
+                send_email('Restablece tu contraseña', MAIL_DEFAULT_SENDER, [email], body, html)
                 return "Correo enviado correctamente. Revisa tu bandeja de entrada."
             except Exception as e:
                 logging.exception("Error enviando correo")
@@ -347,10 +557,15 @@ def reset_password(token):
 
 
 if __name__ == '__main__':
-    # Configurar token de ngrok directamente en el código
     ngrok.set_auth_token(NGROK_AUTHTOKEN)
-    
-    public_url = ngrok.connect(5000)
-    print(f"Tu URL pública es: {public_url}")
-    
+    if NGROK_ENABLED:
+        try:
+            public_url = ngrok.connect(5000)
+            print(f"Tu URL pública es: {public_url}")
+        except Exception as e:
+            logging.warning("No se pudo iniciar ngrok: %s", e)
+            print("ngrok no pudo iniciarse. Ejecuta la app localmente en http://127.0.0.1:5000")
+    else:
+        print("ngrok está deshabilitado. Ejecuta la app localmente en http://127.0.0.1:5000")
+
     app.run(debug=True, host='0.0.0.0', port=5000)
