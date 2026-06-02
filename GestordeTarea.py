@@ -1,17 +1,3 @@
-"""
-Gestor de tareas simple y didáctico.
-
-Código pensado para principiantes: sólo Flask y librerías estándar.
-Almacena datos en `local_database.json` (formato JSON) para evitar bases
-de datos complejas. El envío de correo es opcional y configurable por
-variables de entorno.
-
-Ejecutar:
-    python GestordeTarea.py
-
-Rutas principales: /, /registro, /sesion, /logout, /crear_chiste,
-/ver_chistes, /tus_chistes, /recuperar, /reset_password/<token>
-"""
 
 from flask import Flask, render_template, request, redirect, url_for, session
 import os
@@ -20,9 +6,16 @@ import uuid
 from datetime import datetime, timedelta
 import smtplib
 import logging
+from pymongo import MongoClient
 
-APP_DB = os.path.join(os.path.dirname(__file__), 'local_database.json')
-MAIL_SERVER = os.environ.get('MAIL_SERVER')
+MONGODB_URI="mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
+
+# MongoDB Atlas configuration: set the connection string in MONGODB_URI env var
+MONGODB_URI = os.environ.get('MONGODB_URI')
+if not MONGODB_URI:
+    raise RuntimeError('MONGODB_URI no está configurado. Define la variable de entorno con tu cadena de conexión de MongoDB Atlas.')
+
+MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
@@ -32,16 +25,16 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 logging.basicConfig(level=logging.INFO)
 
-# Utility functions for simple JSON storage
-def load_db():
-    if not os.path.exists(APP_DB):
-        return {'usuarios': [], 'chistes': [], 'etiquetas': []}
-    with open(APP_DB, 'r', encoding='utf-8') as f:
-        return json.load(f)
+# Connect to MongoDB Atlas
+client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+try:
+    client.admin.command('ping')
+    logging.info('Conectado a MongoDB Atlas.')
+except Exception as e:
+    raise RuntimeError(f'No se pudo conectar a MongoDB Atlas: {e}')
 
-def save_db(data):
-    with open(APP_DB, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def get_db():
+    return client['gestor_tareas']
 
 # Simple helpers
 def normalize_tag(value):
@@ -89,7 +82,7 @@ def index():
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        db = load_db()
+        db = get_db()
         usuario = {
             '_id': str(uuid.uuid4()),
             'nombre': request.form.get('nombre'),
@@ -99,25 +92,20 @@ def registro():
             'fecha_nacimiento': request.form.get('fecha_nac'),
             'fecha_registro': datetime.utcnow().isoformat()
         }
-        db['usuarios'].append(usuario)
-        save_db(db)
+        db.usuarios.insert_one(usuario)
         return redirect(url_for('index'))
     return render_template('registro.html')
 
 @app.route('/sesion', methods=['POST'])
 def inicio_sesion():
-    db = load_db()
+    db = get_db()
     email = request.form.get('email')
     password = request.form.get('password')
-    # Buscar usuario con un bucle (más claro que next/comprehension)
-    user = None
-    for u in db.get('usuarios', []):
-        if u.get('email') == email and u.get('password') == password:
-            user = u
-            break
+    # Buscar usuario en MongoDB
+    user = db.usuarios.find_one({'email': email, 'password': password})
     if user:
-        session['usuario_id'] = user['_id']
-        session['usuario_nombre'] = user['nombre']
+        session['usuario_id'] = user.get('_id')
+        session['usuario_nombre'] = user.get('nombre')
         return redirect(url_for('index'))
     return redirect(url_for('index'))
 
@@ -136,7 +124,7 @@ def login():
 def crear_chiste():
     if 'usuario_id' not in session:
         return redirect(url_for('inicio_sesion'))
-    db = load_db()
+    db = get_db()
     if request.method == 'POST':
         contenido = request.form.get('contenido', '').strip()
         etiquetas = parse_tags(request.form.get('etiquetas', ''))
@@ -144,8 +132,8 @@ def crear_chiste():
             return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=[t for t in db.get('etiquetas', [])])
         # ensure tags
         for t in etiquetas:
-            if t not in db.get('etiquetas', []):
-                db.setdefault('etiquetas', []).append(t)
+            # crear etiqueta si no existe
+            db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
         chiste = {
             '_id': str(uuid.uuid4()),
             'contenido': contenido,
@@ -155,48 +143,36 @@ def crear_chiste():
             'autor_nombre': session.get('usuario_nombre'),
             'creado_en': datetime.utcnow().isoformat()
         }
-        db.setdefault('chistes', []).append(chiste)
-        save_db(db)
+        db.chistes.insert_one(chiste)
         return redirect(url_for('ver_chistes'))
-    return render_template('crear_chiste.html', etiquetas=db.get('etiquetas', []))
+    etiquetas_actuales = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
+    return render_template('crear_chiste.html', etiquetas=etiquetas_actuales)
 
 @app.route('/ver_chistes')
 def ver_chistes():
-    db = load_db()
-    chistes = db.get('chistes', [])[:]
-    return render_template('ver_chistes.html', chistes=chistes, etiquetas=db.get('etiquetas', []), search='')
+    db = get_db()
+    chistes = list(db.chistes.find().sort('creado_en', -1))
+    etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
+    return render_template('ver_chistes.html', chistes=chistes, etiquetas=etiquetas, search='')
 
 @app.route('/tus_chistes', methods=['GET', 'POST'])
 def tus_chistes():
     if 'usuario_id' not in session:
         return redirect(url_for('index'))
-    db = load_db()
+    db = get_db()
     user_id = session['usuario_id']
     if request.method == 'POST':
         action = request.form.get('action')
         chiste_id = request.form.get('chiste_id')
         if action == 'delete':
             # Crear una nueva lista sin el chiste eliminado
-            nuevos = []
-            for c in db.get('chistes', []):
-                if c.get('_id') == chiste_id and c.get('autor_id') == user_id:
-                    # saltar (eliminar)
-                    continue
-                nuevos.append(c)
-            db['chistes'] = nuevos
-            save_db(db)
+            db.chistes.delete_one({'_id': chiste_id, 'autor_id': user_id})
         elif action == 'update':
-            for c in db.get('chistes', []):
-                if c['_id'] == chiste_id and c['autor_id'] == user_id:
-                    c['contenido'] = request.form.get('contenido', c['contenido'])
-                    c['temas'] = parse_tags(request.form.get('etiquetas', ','.join(c.get('temas', []))))
-                    break
-            save_db(db)
+            contenido_n = request.form.get('contenido')
+            temas_n = parse_tags(request.form.get('etiquetas', ''))
+            db.chistes.update_one({'_id': chiste_id, 'autor_id': user_id}, {'$set': {'contenido': contenido_n, 'temas': temas_n}})
         return redirect(url_for('tus_chistes'))
-    chistes = []
-    for c in db.get('chistes', []):
-        if c.get('autor_id') == user_id:
-            chistes.append(c)
+    chistes = list(db.chistes.find({'autor_id': user_id}))
     return render_template('tus_chistes.html', chistes=chistes)
 
 # Password recovery: simple token stored in the user record with expiration
@@ -207,18 +183,12 @@ def generate_reset_token():
 def recuperar_contrasena():
     if request.method == 'POST':
         email = request.form.get('email')
-        db = load_db()
-        # Buscar usuario con un bucle claro
-        user = None
-        for u in db.get('usuarios', []):
-            if u.get('email') == email:
-                user = u
-                break
-        if user is not None:
+        db = get_db()
+        user = db.usuarios.find_one({'email': email})
+        if user:
             token = generate_reset_token()
-            user['reset_token'] = token
-            user['reset_expire'] = (datetime.utcnow() + timedelta(hours=1)).isoformat()
-            save_db(db)
+            expire_iso = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+            db.usuarios.update_one({'_id': user.get('_id')}, {'$set': {'reset_token': token, 'reset_expire': expire_iso}})
             reset_url = url_for('reset_password', token=token, _external=True)
             body = 'Hola ' + (user.get('nombre') or '') + '\n\n'
             body += 'Usa este enlace para cambiar tu contraseña:\n' + reset_url + '\n\n'
@@ -230,13 +200,9 @@ def recuperar_contrasena():
 
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
-    db = load_db()
-    # Buscar usuario por token con un bucle claro
-    user = None
-    for u in db.get('usuarios', []):
-        if u.get('reset_token') == token:
-            user = u
-            break
+    db = get_db()
+    # Buscar usuario por token en MongoDB
+    user = db.usuarios.find_one({'reset_token': token})
     if user is None:
         return 'Enlace no válido o expirado.'
     expire = datetime.fromisoformat(user.get('reset_expire'))
@@ -251,13 +217,21 @@ def reset_password(token):
         if new_password != confirm:
             return render_template('cambiar_contra.html', email=user.get('email'), error='Las contraseñas no coinciden.')
         # Actualizar contraseña y limpiar token
-        user['password'] = new_password
-        user.pop('reset_token', None)
-        user.pop('reset_expire', None)
-        save_db(db)
+        db.usuarios.update_one({'_id': user.get('_id')}, {'$set': {'password': new_password}, '$unset': {'reset_token': '', 'reset_expire': ''}})
         # Redirigir al inicio
         return redirect(url_for('index'))
     return render_template('cambiar_contra.html', email=user.get('email'))
+
+
+@app.route('/mongo_test')
+def mongo_test():
+    """Ruta de diagnóstico: intenta hacer ping a MongoDB Atlas."""
+    try:
+        info = client.admin.command('ping')
+        return f"MongoDB ping OK: {info}"
+    except Exception as e:
+        logging.exception('Error en mongo_test')
+        return f"Error conectando a MongoDB: {e}", 500
 
 if __name__ == '__main__':
     app.run(debug=True)

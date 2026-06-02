@@ -1,28 +1,39 @@
-<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Cambiar contraseña</title>
-  </head>
-  <body>
-    <div style="max-width:520px;margin:40px auto;padding:20px;border:1px solid #ccc;border-radius:6px;">
-      <h1 style="margin-bottom:8px">Cambiar contraseña</h1>
-      <p>Cuenta: <strong>{{ email }}</strong></p>
-      {% if error %}
-        <div style="color:#b00020;margin-bottom:8px">{{ error }}</div>
-      {% endif %}
-      <form method="post">
-        <div style="margin-bottom:8px">
-          <label for="password">Nueva contraseña</label><br>
-          <input type="password" name="password" id="password" required style="width:100%;padding:8px;margin-top:4px">
+{% extends "base.html" %}
+
+{% block title %}Cambiar contraseña | Momografo{% endblock %}
+
+{% block content %}
+<div class="card shadow-lg p-4 bg-dark rounded-0 border border-danger mx-auto" style="max-width: 28rem; border-top: 5px solid #ff0000;">
+    <div class="card-body">
+        <div class="text-center mb-4">
+            <div class="fs-1">🔑</div>
+            <h2 class="fw-bold text-light">Cambiar <span class="text-danger">Contraseña</span></h2>
+            <p class="text-white-50">Cuenta: <strong>{{ email }}</strong></p>
         </div>
-        <div style="margin-bottom:12px">
-          <label for="confirm">Confirmar contraseña</label><br>
-          <input type="password" name="confirm" id="confirm" required style="width:100%;padding:8px;margin-top:4px">
+
+        {% if error %}
+            <div class="alert alert-danger rounded-0" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="post">
+            <div class="mb-3">
+                <label class="form-label small text-light text-uppercase fw-bold" for="password">Nueva contraseña</label>
+                <input type="password" name="password" id="password" class="form-control bg-light text-dark border-secondary rounded-0" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small text-light text-uppercase fw-bold" for="confirm">Confirmar contraseña</label>
+                <input type="password" name="confirm" id="confirm" class="form-control bg-light text-dark border-secondary rounded-0" required>
+            </div>
+            <button type="submit" class="btn btn-danger w-100 fw-bold py-2 mt-3 text-white rounded-0">Confirmar cambios</button>
+        </form>
+
+        <hr class="border-secondary mt-4">
+
+        <div class="text-center mt-3">
+            <a href="/" class="btn btn-outline-light w-100 fw-bold py-2 text-white text-uppercase rounded-0">Volver al inicio</a>
         </div>
-        <button type="submit" style="padding:10px 16px;background:#1a73e8;color:#fff;border:none;border-radius:4px">Confirmar y volver</button>
-      </form>
     </div>
-  </body>
-</html>
+</div>
+{% endblock %}
