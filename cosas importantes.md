@@ -11,7 +11,7 @@ https://corroding-dolphin-subway.ngrok-free.dev
 
 para conectar con ngrok tenemos que:
 
-1.- descargar ngrok desde la microsoft store o desde si pagina oficial 
+1.- descargar ngrok desde la microsoft store o desde su pagina oficial 
 
 https://ngrok.com/download/windows 
 
