@@ -40,6 +40,18 @@ https://ngrok.com/download/windows
 (https://corroding-dolphin-subway.ngrok-free.dev) lo puedes abrir pulsando "ctrl+click"
 
 
+o tambien puedes ejeutar los comando directamente desd ela temrinal, ngrok ya esta instalado, despues de usar uv sync ejecutas el comando:
+1.- ngrok config add-authtoken 3EXLGEPWW3aKirczcaRQUl9X6IK_82NWY7cc6HAKoQXS1vvnn
+
+despues usa en la misma temrinal donde pusist el comando anterior:
+2.- ngrok http 5000
+
+y finalemte ejecuta el gestordetareas.py
+
+el enlace deberia de ser: https://corroding-dolphin-subway.ngrok-free.dev
+
+
+
 
 
 

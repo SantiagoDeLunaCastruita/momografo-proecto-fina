@@ -12,8 +12,8 @@ MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb+srv://Said_Ramirez:NfT1w9CG
 # Configuración de correo SMTP para recuperación de contraseña.
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+MAIL_USERNAME = os.environ.get('fruterialospapus@gmail.com')
+MAIL_PASSWORD = os.environ.get('vdsb uadx wkzu rukg')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
 
 app = Flask(__name__)
@@ -141,10 +141,13 @@ def crear_chiste():
         for t in etiquetas:
             db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
 
+        # Normalizar el tipo de humor para consistencia.
+        tipo_humor = request.form.get('tipo_humor', 'General').strip()
+        
         chiste = {
             '_id': secrets.token_hex(16),
             'contenido': contenido,
-            'tipo_humor': request.form.get('tipo_humor', 'General'),
+            'tipo_humor': tipo_humor,
             'temas': etiquetas,
             'autor_id': session['usuario_id'],
             'autor_nombre': session.get('usuario_nombre'),
@@ -152,7 +155,8 @@ def crear_chiste():
         }
 
         db.chistes.insert_one(chiste)
-        if chiste.get('tipo_humor', '').strip().lower() == 'negro':
+        # Redirigir a la sección correcta según el tipo de humor.
+        if tipo_humor.lower() == 'negro':
             return redirect(url_for('ver_chistes_negros'))
         return redirect(url_for('ver_chistes'))
 
@@ -162,7 +166,8 @@ def crear_chiste():
 @app.route('/ver_chistes')
 def ver_chistes():
     db = get_db()
-    chistes = list(db.chistes.find().sort('creado_en', -1))
+    # Mostrar solo los chistes que NO sean de humor negro - estos van a la sección separada.
+    chistes = list(db.chistes.find({'tipo_humor': {'$ne': 'Negro'}}).sort('creado_en', -1))
     etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
     return render_template('ver_chistes.html', chistes=chistes, etiquetas=etiquetas, search='')
 
