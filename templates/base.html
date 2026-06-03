@@ -1,3 +1,4 @@
+<!-- base.html: plantilla base común para todas las páginas -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -20,6 +21,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 {% if session.get('usuario_nombre') %}
+                    <!-- Navegación para usuarios autenticados -->
                     <ul class="navbar-nav mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link text-white" href="/ver_chistes">Ver chistes</a></li>
                     </ul>
@@ -52,6 +54,7 @@
         </div>
     </nav>
     <div class="container mt-5">
+        <!-- Bloque de contenido específico de cada página -->
         {% block content %}{% endblock %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
