@@ -6,15 +6,21 @@ import smtplib
 import logging
 from pymongo import MongoClient
 
+
 # Configuración de conexión a MongoDB.
-MONGODB_URI = os.environ.get('mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela')
+# Usa la variable de entorno MONGODB_URI; si no existe, conserva la cadena de Atlas
+# para evitar que MongoClient caiga en el valor por defecto de localhost.
+MONGODB_URI = os.environ.get(
+    'MONGODB_URI',
+    'mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela'
+)
 
 # Configuración de correo SMTP para recuperación de contraseña.
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-MAIL_USERNAME = os.environ.get('fruterialospapus@gmail.com')
-MAIL_PASSWORD = os.environ.get('vdsb uadx wkzu rukg')
-MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
+MAIL_USERNAME = os.environ.get('MAIL_USERNAME', 'fruterialospapus@gmail.com')
+MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', 'vdsb uadx wkzu rukg')
+MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'no-reply@example.com'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
@@ -48,6 +54,26 @@ def parse_tags(value):
         if t and t not in tags:
             tags.append(t)
     return tags
+
+
+def parse_iso_datetime(value):
+    """Convierte cadenas ISO a datetime para que Jinja pueda usar strftime."""
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return value
+    return value
+
+
+def normalize_chistes_for_render(chistes):
+    """Asegura que los campos de fecha sean datetime antes de renderizar."""
+    for chiste in chistes:
+        if 'creado_en' in chiste:
+            chiste['creado_en'] = parse_iso_datetime(chiste.get('creado_en'))
+    return chistes
 
 
 def send_email(subject, sender, recipients, body):
@@ -167,9 +193,9 @@ def crear_chiste():
 def ver_chistes():
     db = get_db()
     # Mostrar solo los chistes que NO sean de humor negro - estos van a la sección separada.
-    chistes = list(db.chistes.find({'tipo_humor': {'$ne': 'Negro'}}).sort('creado_en', -1))
+    chistes = normalize_chistes_for_render(list(db.chistes.find({'tipo_humor': {'$ne': 'Negro'}}).sort('creado_en', -1)))
     etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
-    return render_template('ver_chistes.html', chistes=chistes, etiquetas=etiquetas, search='')
+    return render_template('ver_chistes.html', chistes=chistes, etiquetas=etiquetas, search='', selected_humor='Todos')
 
 
 @app.route('/ver_chistes_negros')
@@ -188,7 +214,7 @@ def ver_chistes_negros():
         filtros.append({'temas': tag})
 
     query = {'$and': filtros} if len(filtros) > 1 else filtros[0]
-    chistes = list(db.chistes.find(query).sort('creado_en', -1))
+    chistes = normalize_chistes_for_render(list(db.chistes.find(query).sort('creado_en', -1)))
     etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
     return render_template('ver_chistes_negros.html', chistes=chistes, etiquetas=etiquetas, search=q, selected_tag=tag)
 
@@ -224,7 +250,7 @@ def tus_chistes():
             )
         return redirect(url_for('tus_chistes'))
 
-    chistes = list(db.chistes.find({'autor_id': user_id}))
+    chistes = normalize_chistes_for_render(list(db.chistes.find({'autor_id': user_id})))
     return render_template('tus_chistes.html', chistes=chistes)
 
 
