@@ -11,18 +11,13 @@ import smtplib
 import logging
 from pymongo import MongoClient
 
-# La URI de MongoDB se toma de la variable de entorno para no hardcodear credenciales.
-MONGODB_URI = ("mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela")
-if not MONGODB_URI:
-    raise RuntimeError('MONGODB_URI no está configurado. Define la variable de entorno con tu cadena de conexión de MongoDB Atlas.')
-
-# MongoDB connection: prefer MONGODB_URI env var, fallback to localhost
-MONGODB_URI = os.environ.get('mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela') or 'mongodb://localhost:27017'
+# Conexión con MongoDB: tomar la URI desde la variable de entorno correcta.
+# Si no existe, usa la URI de Atlas como valor por defecto.
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela')
 
 # Configuración de correo para enviar mensajes de recuperación de contraseña.
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-# Use standard env var names for username/password
 MAIL_USERNAME = os.environ.get('fruterialospapus@gmail.com')
 MAIL_PASSWORD = os.environ.get('vdsb uadx wkzu rukg')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
