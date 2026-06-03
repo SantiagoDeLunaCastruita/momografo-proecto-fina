@@ -34,3 +34,13 @@ https://ngrok.com/download/windows
 
 6.- finalmente abriremos el enlace que esta adjuntado en la parte superior de este archivo 
 (https://corroding-dolphin-subway.ngrok-free.dev) lo puedes abrir pulsando "ctrl+click"
+
+
+
+
+
+
+
+
+
+

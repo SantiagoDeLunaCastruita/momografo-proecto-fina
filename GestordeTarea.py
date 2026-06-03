@@ -2,7 +2,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import os
 import json
-import uuid
+import secrets
 from datetime import datetime, timedelta
 import smtplib
 import logging
@@ -17,8 +17,8 @@ if not MONGODB_URI:
 
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+MAIL_USERNAME = os.environ.get('fruterialospapus@gmail.com')
+MAIL_PASSWORD = os.environ.get('vdsb uadx wkzu rukg')
 MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'no-reply@example.com')
 
 app = Flask(__name__)
@@ -67,14 +67,13 @@ def send_email(subject, sender, recipients, body):
             logging.exception('Fallo al enviar correo: %s', e)
             return False
     else:
-        # No SMTP configured: print the message for development
         logging.info('Simulating email (SMTP not configured). To enable, set MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD.')
         logging.info('To: %s', recipients)
         logging.info('Subject: %s', subject)
         logging.info('%s', body)
         return True
 
-# Routes
+
 @app.route('/')
 def index():
     return render_template('pagina_de_inicio.html')
@@ -84,7 +83,7 @@ def registro():
     if request.method == 'POST':
         db = get_db()
         usuario = {
-            '_id': str(uuid.uuid4()),
+            '_id': secrets.token_hex(16),
             'nombre': request.form.get('nombre'),
             'email': request.form.get('email'),
             'password': request.form.get('password'),
@@ -101,7 +100,6 @@ def inicio_sesion():
     db = get_db()
     email = request.form.get('email')
     password = request.form.get('password')
-    # Buscar usuario en MongoDB
     user = db.usuarios.find_one({'email': email, 'password': password})
     if user:
         session['usuario_id'] = user.get('_id')
@@ -117,7 +115,6 @@ def logout():
 
 @app.route('/login')
 def login():
-    # Muestra el formulario de inicio de sesión
     return render_template('index.html')
 
 @app.route('/crear_chiste', methods=['GET', 'POST'])
@@ -130,12 +127,10 @@ def crear_chiste():
         etiquetas = parse_tags(request.form.get('etiquetas', ''))
         if not contenido or not etiquetas:
             return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=[t for t in db.get('etiquetas', [])])
-        # ensure tags
         for t in etiquetas:
-            # crear etiqueta si no existe
             db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
         chiste = {
-            '_id': str(uuid.uuid4()),
+            '_id': secrets.token_hex(16),
             'contenido': contenido,
             'tipo_humor': request.form.get('tipo_humor', 'General'),
             'temas': etiquetas,
@@ -165,7 +160,6 @@ def tus_chistes():
         action = request.form.get('action')
         chiste_id = request.form.get('chiste_id')
         if action == 'delete':
-            # Crear una nueva lista sin el chiste eliminado
             db.chistes.delete_one({'_id': chiste_id, 'autor_id': user_id})
         elif action == 'update':
             contenido_n = request.form.get('contenido')
@@ -175,9 +169,8 @@ def tus_chistes():
     chistes = list(db.chistes.find({'autor_id': user_id}))
     return render_template('tus_chistes.html', chistes=chistes)
 
-# Password recovery: simple token stored in the user record with expiration
 def generate_reset_token():
-    return str(uuid.uuid4())
+    return secrets.token_urlsafe(32)
 
 @app.route('/recuperar', methods=['GET', 'POST'])
 def recuperar_contrasena():
@@ -201,7 +194,6 @@ def recuperar_contrasena():
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     db = get_db()
-    # Buscar usuario por token en MongoDB
     user = db.usuarios.find_one({'reset_token': token})
     if user is None:
         return 'Enlace no válido o expirado.'
@@ -209,29 +201,15 @@ def reset_password(token):
     if datetime.utcnow() > expire:
         return 'El enlace ha expirado.'
     if request.method == 'POST':
-        # Obtener ambos campos y validar
         new_password = request.form.get('password')
         confirm = request.form.get('confirm')
         if not new_password or not confirm:
             return render_template('cambiar_contra.html', email=user.get('email'), error='Rellena ambos campos.')
         if new_password != confirm:
             return render_template('cambiar_contra.html', email=user.get('email'), error='Las contraseñas no coinciden.')
-        # Actualizar contraseña y limpiar token
         db.usuarios.update_one({'_id': user.get('_id')}, {'$set': {'password': new_password}, '$unset': {'reset_token': '', 'reset_expire': ''}})
-        # Redirigir al inicio
         return redirect(url_for('index'))
     return render_template('cambiar_contra.html', email=user.get('email'))
-
-
-@app.route('/mongo_test')
-def mongo_test():
-    """Ruta de diagnóstico: intenta hacer ping a MongoDB Atlas."""
-    try:
-        info = client.admin.command('ping')
-        return f"MongoDB ping OK: {info}"
-    except Exception as e:
-        logging.exception('Error en mongo_test')
-        return f"Error conectando a MongoDB: {e}", 500
 
 if __name__ == '__main__':
     app.run(debug=True)
