@@ -7,7 +7,7 @@ import logging
 from pymongo import MongoClient
 
 # Configuración de conexión a MongoDB.
-MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela')
+MONGODB_URI = os.environ.get('mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela')
 
 # Configuración de correo SMTP para recuperación de contraseña.
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -107,7 +107,7 @@ def inicio_sesion():
     password = request.form.get('password')
     user = db.usuarios.find_one({'email': email, 'password': password})
     if user:
-        session['usuario_id'] = user.get('_id')
+        session['usuario_id'] = str(user.get('_id'))
         session['usuario_nombre'] = user.get('nombre')
         return redirect(url_for('index'))
     return redirect(url_for('index'))
@@ -216,8 +216,12 @@ def tus_chistes():
             db.chistes.delete_one({'_id': chiste_id, 'autor_id': user_id})
         elif action == 'update':
             contenido_n = request.form.get('contenido')
+            tipo_humor_n = request.form.get('tipo_humor', 'General').strip()
             temas_n = parse_tags(request.form.get('etiquetas', ''))
-            db.chistes.update_one({'_id': chiste_id, 'autor_id': user_id}, {'$set': {'contenido': contenido_n, 'temas': temas_n}})
+            db.chistes.update_one(
+                {'_id': chiste_id, 'autor_id': user_id},
+                {'$set': {'contenido': contenido_n, 'tipo_humor': tipo_humor_n, 'temas': temas_n}}
+            )
         return redirect(url_for('tus_chistes'))
 
     chistes = list(db.chistes.find({'autor_id': user_id}))
