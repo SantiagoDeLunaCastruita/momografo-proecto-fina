@@ -1,4 +1,5 @@
 
+<<<<<<< HEAD
 from flask import Flask, render_template, request, redirect, url_for, session  # Flask y utilidades web
 import os  # acceso a variables de entorno y rutas del sistema
 import json  # manejo básico de JSON (no usado ampliamente aquí pero disponible)
@@ -22,11 +23,48 @@ MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 
 
 app = Flask(__name__)  # app Flask
 # Clave secreta para sesiones; en producción debe venir de una variable segura
+=======
+# Este archivo es el servidor Flask principal de la aplicación.
+# Define rutas, gestiona la base de datos MongoDB y envía correos para recuperación de contraseña.
+
+from flask import Flask, render_template, request, redirect, url_for, session
+import os
+import json
+import secrets
+from datetime import datetime, timedelta
+import smtplib
+import logging
+from pymongo import MongoClient
+
+# La URI de MongoDB se toma de la variable de entorno para no hardcodear credenciales.
+MONGODB_URI = ("mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela")
+if not MONGODB_URI:
+    raise RuntimeError('MONGODB_URI no está configurado. Define la variable de entorno con tu cadena de conexión de MongoDB Atlas.')
+
+# MongoDB connection: prefer MONGODB_URI env var, fallback to localhost
+MONGODB_URI = os.environ.get('mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela') or 'mongodb://localhost:27017'
+
+# Configuración de correo para enviar mensajes de recuperación de contraseña.
+MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+# Use standard env var names for username/password
+MAIL_USERNAME = os.environ.get('fruterialospapus@gmail.com')
+MAIL_PASSWORD = os.environ.get('vdsb uadx wkzu rukg')
+MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
+
+# Inicializa la aplicación Flask y la clave secreta para sesiones.
+app = Flask(__name__)
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 logging.basicConfig(level=logging.INFO)  # configurar logging en INFO
 
+<<<<<<< HEAD
 # Connect to MongoDB Atlas
 client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)  # inicializa cliente MongoDB
+=======
+# Conectar a MongoDB Atlas y verificar la conexión.
+client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
 try:
     # Intento rápido para comprobar conexión
     client.admin.command('ping')
@@ -36,13 +74,18 @@ except Exception as e:
     logging.warning('No se pudo conectar a MongoDB: %s', e)
     logging.warning('Se continuará, pero algunas operaciones de BD pueden fallar hasta que se configure la conexión.')
 
+# Devuelve el objeto de base de datos que usaremos en todas las rutas.
 def get_db():
     # Devuelve el objeto de base de datos que usaremos en las rutas
     return client['gestor_tareas']
 
-# Simple helpers
+# Helpers pequeños para normalizar y parsear etiquetas desde un campo CSV.
 def normalize_tag(value):
+<<<<<<< HEAD
     # Normaliza una etiqueta: trim, lowercase, colapsa múltiples espacios
+=======
+    # Quita espacios extra y convierte todo a minúsculas.
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
     return ' '.join(value.strip().lower().split())
 
 def parse_tags(value):
@@ -54,7 +97,8 @@ def parse_tags(value):
             tags.append(t)
     return tags
 
-# Email sending: if SMTP env variables provided, try sending; otherwise print link to console.
+# Función para enviar correo electrónico usando SMTP.
+# Si no hay credenciales de SMTP, solo registra el mensaje en la consola.
 def send_email(subject, sender, recipients, body):
     # Asegurar que `recipients` sea una lista
     if not isinstance(recipients, (list, tuple)):
@@ -63,6 +107,7 @@ def send_email(subject, sender, recipients, body):
     # Si hay credenciales SMTP configuradas, intentamos enviar el correo
     if MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD:
         try:
+            # Conectar al servidor SMTP y enviar el correo.
             server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=10)
             server.ehlo()
             server.starttls()  # usar TLS
@@ -76,7 +121,11 @@ def send_email(subject, sender, recipients, body):
             logging.exception('Fallo al enviar correo: %s', e)
             return False
     else:
+<<<<<<< HEAD
         # Si no hay SMTP configurado, imprimimos en logs (útil en desarrollo)
+=======
+        # No hay SMTP configurado, así que se imprime el correo en la consola.
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
         logging.info('Simulating email (SMTP not configured). To enable, set MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD.')
         logging.info('To: %s', recipients)
         logging.info('Subject: %s', subject)
@@ -84,11 +133,13 @@ def send_email(subject, sender, recipients, body):
         return True
 
 
+# Ruta principal que muestra la página de inicio.
 @app.route('/')
 def index():
     # Página principal
     return render_template('pagina_de_inicio.html')
 
+# Registro de usuarios. En GET muestra el formulario, en POST guarda el usuario en MongoDB.
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
@@ -108,6 +159,7 @@ def registro():
     # GET -> mostrar formulario de registro
     return render_template('registro.html')
 
+# Inicio de sesión: valida email y contraseña y almacena datos de usuario en sesión.
 @app.route('/sesion', methods=['POST'])
 def inicio_sesion():
     # Maneja el POST del formulario de inicio de sesión
@@ -123,18 +175,20 @@ def inicio_sesion():
     # En caso de fallo, redirigimos (podrías mostrar un mensaje de error)
     return redirect(url_for('index'))
 
+# Cierra la sesión del usuario.
 @app.route('/logout')
 def logout():
     # Cierra la sesión del usuario
     session.clear()
     return redirect(url_for('index'))
 
-
+# Muestra pantalla de login.
 @app.route('/login')
 def login():
     # Mostrar formulario de login (aquí reutiliza `index.html` según diseño previo)
     return render_template('index.html')
 
+# Crear un chiste nuevo. Solo usuarios autenticados pueden acceder.
 @app.route('/crear_chiste', methods=['GET', 'POST'])
 def crear_chiste():
     # Solo usuarios autenticados pueden acceder a crear chiste
@@ -150,11 +204,19 @@ def crear_chiste():
         contenido = request.form.get('contenido', '').strip()
         etiquetas = parse_tags(request.form.get('etiquetas', ''))
         if not contenido or not etiquetas:
+<<<<<<< HEAD
             # Volver a mostrar el formulario con error y las etiquetas disponibles
             return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=etiquetas_actuales)
 
         # Guardar/asegurar etiquetas en colección `etiquetas`
+=======
+
+            # Si falta contenido o etiquetas, se vuelve a mostrar el formulario con error.
+            return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=etiquetas_actuales)
+
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
         for t in etiquetas:
+            # Asegura que cada etiqueta exista en la colección de etiquetas.
             db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
 
         # Construir documento del chiste
@@ -177,6 +239,7 @@ def crear_chiste():
     # GET -> mostrar formulario con etiquetas disponibles
     return render_template('crear_chiste.html', etiquetas=etiquetas_actuales)
 
+# Mostrar todos los chistes ordenados por fecha de creación descendente.
 @app.route('/ver_chistes')
 def ver_chistes():
     # Mostrar todos los chistes (vista genérica)
@@ -186,26 +249,7 @@ def ver_chistes():
     return render_template('ver_chistes.html', chistes=chistes, etiquetas=etiquetas, search='')
 
 
-@app.route('/ver_chistes_negros')
-def ver_chistes_negros():
-    db = get_db()
-    q = request.args.get('q', '').strip()
-    tag = request.args.get('tag', '')
-
-    filtros = [{'tipo_humor': 'Negro'}]
-    if q:
-        filtros.append({'$or': [
-            {'contenido': {'$regex': q, '$options': 'i'}},
-            {'autor_nombre': {'$regex': q, '$options': 'i'}}
-        ]})
-    if tag:
-        filtros.append({'temas': tag})
-
-    query = {'$and': filtros} if len(filtros) > 1 else filtros[0]
-    chistes = list(db.chistes.find(query).sort('creado_en', -1))
-    etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
-    return render_template('ver_chistes_negros.html', chistes=chistes, etiquetas=etiquetas, search=q, selected_tag=tag)
-
+# Página de usuario donde puede ver, eliminar o actualizar sus propios chistes.
 @app.route('/tus_chistes', methods=['GET', 'POST'])
 def tus_chistes():
     # Mostrar y gestionar chistes del usuario autenticado
@@ -218,7 +262,11 @@ def tus_chistes():
         action = request.form.get('action')
         chiste_id = request.form.get('chiste_id')
         if action == 'delete':
+<<<<<<< HEAD
             # Borrar solo si el autor coincide
+=======
+            # Elimina solo si el chiste pertenece al usuario.
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
             db.chistes.delete_one({'_id': chiste_id, 'autor_id': user_id})
         elif action == 'update':
             # Actualizar contenido y etiquetas
@@ -230,10 +278,12 @@ def tus_chistes():
     chistes = list(db.chistes.find({'autor_id': user_id}))
     return render_template('tus_chistes.html', chistes=chistes)
 
+# Genera un token seguro para recuperación de contraseña.
 def generate_reset_token():
     # Genera un token seguro para recuperación de contraseñas
     return secrets.token_urlsafe(32)
 
+# Formulario de recuperación de contraseña. Envía un enlace con token al correo del usuario.
 @app.route('/recuperar', methods=['GET', 'POST'])
 def recuperar_contrasena():
     if request.method == 'POST':
@@ -252,11 +302,16 @@ def recuperar_contrasena():
             body += 'Usa este enlace para cambiar tu contraseña:\n' + reset_url + '\n\n'
             body += 'Si no lo solicitaste, ignora este mensaje.'
             send_email('Restablece tu contraseña', MAIL_DEFAULT_SENDER, email, body)
+<<<<<<< HEAD
         # Mostrar página que instruye al usuario a revisar su correo (independiente de si el email existía)
+=======
+        # Mostrar página que indica al usuario revisar su correo, incluso si no existe el email.
+>>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
         return render_template('esperar_correo.html', email=email)
     # GET -> mostrar formulario para solicitar recuperación
     return render_template('recuperar.html')
 
+# Página de cambio de contraseña usando el token enviado por correo.
 @app.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     # Reset de contraseña vía token
@@ -280,6 +335,7 @@ def reset_password(token):
     # GET -> mostrar formulario para cambiar contraseña
     return render_template('cambiar_contra.html', email=user.get('email'))
 
+# Ejecuta la aplicación en modo debug cuando se lanza directamente.
 if __name__ == '__main__':
     # Ejecutar app en modo debug para desarrollo
     app.run(debug=True)

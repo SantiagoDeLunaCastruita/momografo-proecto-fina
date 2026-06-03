@@ -1,3 +1,7 @@
+CONECCION MONGO ATLAS:
+
+mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela
+
 
 autoken:
 
