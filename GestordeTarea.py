@@ -8,18 +8,15 @@ import smtplib
 import logging
 from pymongo import MongoClient
 
-MONGODB_URI="mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela"
-
-# MongoDB Atlas configuration: set the connection string in MONGODB_URI env var
-MONGODB_URI = os.environ.get('MONGODB_URI')
-if not MONGODB_URI:
-    raise RuntimeError('MONGODB_URI no está configurado. Define la variable de entorno con tu cadena de conexión de MongoDB Atlas.')
+# MongoDB connection: prefer MONGODB_URI env var, fallback to localhost
+MONGODB_URI = os.environ.get('MONGODB_URI') or 'mongodb://localhost:27017'
 
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-MAIL_USERNAME = os.environ.get('fruterialospapus@gmail.com')
-MAIL_PASSWORD = os.environ.get('vdsb uadx wkzu rukg')
-MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'no-reply@example.com')
+# Use standard env var names for username/password
+MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
@@ -29,9 +26,10 @@ logging.basicConfig(level=logging.INFO)
 client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
 try:
     client.admin.command('ping')
-    logging.info('Conectado a MongoDB Atlas.')
+    logging.info('Conectado a MongoDB.')
 except Exception as e:
-    raise RuntimeError(f'No se pudo conectar a MongoDB Atlas: {e}')
+    logging.warning('No se pudo conectar a MongoDB: %s', e)
+    logging.warning('Se continuará, pero algunas operaciones de BD pueden fallar hasta que se configure la conexión.')
 
 def get_db():
     return client['gestor_tareas']
@@ -120,13 +118,15 @@ def login():
 @app.route('/crear_chiste', methods=['GET', 'POST'])
 def crear_chiste():
     if 'usuario_id' not in session:
-        return redirect(url_for('inicio_sesion'))
+        return redirect(url_for('login'))
     db = get_db()
+    # obtener etiquetas actuales para mostrar en el formulario
+    etiquetas_actuales = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
     if request.method == 'POST':
         contenido = request.form.get('contenido', '').strip()
         etiquetas = parse_tags(request.form.get('etiquetas', ''))
         if not contenido or not etiquetas:
-            return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=[t for t in db.get('etiquetas', [])])
+            return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=etiquetas_actuales)
         for t in etiquetas:
             db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
         chiste = {
@@ -139,8 +139,9 @@ def crear_chiste():
             'creado_en': datetime.utcnow().isoformat()
         }
         db.chistes.insert_one(chiste)
+        if chiste.get('tipo_humor', '').strip().lower() == 'negro':
+            return redirect(url_for('ver_chistes_negros'))
         return redirect(url_for('ver_chistes'))
-    etiquetas_actuales = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
     return render_template('crear_chiste.html', etiquetas=etiquetas_actuales)
 
 @app.route('/ver_chistes')
@@ -149,6 +150,27 @@ def ver_chistes():
     chistes = list(db.chistes.find().sort('creado_en', -1))
     etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
     return render_template('ver_chistes.html', chistes=chistes, etiquetas=etiquetas, search='')
+
+
+@app.route('/ver_chistes_negros')
+def ver_chistes_negros():
+    db = get_db()
+    q = request.args.get('q', '').strip()
+    tag = request.args.get('tag', '')
+
+    filtros = [{'tipo_humor': 'Negro'}]
+    if q:
+        filtros.append({'$or': [
+            {'contenido': {'$regex': q, '$options': 'i'}},
+            {'autor_nombre': {'$regex': q, '$options': 'i'}}
+        ]})
+    if tag:
+        filtros.append({'temas': tag})
+
+    query = {'$and': filtros} if len(filtros) > 1 else filtros[0]
+    chistes = list(db.chistes.find(query).sort('creado_en', -1))
+    etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
+    return render_template('ver_chistes_negros.html', chistes=chistes, etiquetas=etiquetas, search=q, selected_tag=tag)
 
 @app.route('/tus_chistes', methods=['GET', 'POST'])
 def tus_chistes():

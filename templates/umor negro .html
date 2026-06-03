@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Humor Negro | Momografo{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+	<div class="col-lg-8">
+		<div class="card bg-secondary bg-opacity-10 border border-danger shadow-sm">
+			<div class="card-body p-4">
+				<h1 class="text-white mb-3">Humor negro</h1>
+				<p class="text-light mb-4">Colección de chistes de humor negro. Ten en cuenta que este tipo de contenido puede resultar sensible para algunas personas.</p>
+
+				<div class="d-flex gap-2 mb-3">
+					<a href="/ver_chistes_negros" class="btn btn-danger">Ver chistes negros</a>
+					<a href="/crear_chiste" class="btn btn-outline-light">Crear un chiste</a>
+				</div>
+
+				<div class="mt-4">
+					<h5 class="text-white-50">Consejos</h5>
+					<ul class="text-light">
+						<li>Respeta las reglas del sitio y evita ataques personales.</li>
+						<li>Usa etiquetas relevantes para facilitar búsquedas.</li>
+						<li>Si quieres editar o borrar un chiste, ve a <a href="/tus_chistes" class="link-light">Tus chistes</a>.</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
