@@ -1,29 +1,4 @@
 
-<<<<<<< HEAD
-from flask import Flask, render_template, request, redirect, url_for, session  # Flask y utilidades web
-import os  # acceso a variables de entorno y rutas del sistema
-import json  # manejo básico de JSON (no usado ampliamente aquí pero disponible)
-import secrets  # generación de tokens seguros (ids y tokens)
-from datetime import datetime, timedelta  # manejo de fechas y tiempos
-import smtplib  # envío de correos via SMTP
-import logging  # registro de eventos / debugging
-from pymongo import MongoClient  # cliente para MongoDB
-
-# MongoDB connection: prefer `MONGODB_URI` desde las variables de entorno;
-# si no está definido, usamos un fallback local para desarrollo.
-MONGODB_URI = os.environ.get('MONGODB_URI') or 'mongodb://localhost:27017'
-
-MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')  # servidor SMTP (por defecto Gmail)
-MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))  # puerto SMTP (STARTTLS por defecto)
-# Credenciales de correo: mantener en variables de entorno por seguridad
-MAIL_USERNAME = os.environ.get('MAIL_USERNAME')  # usuario SMTP (email)
-MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # contraseña SMTP
-# Dirección remitente por defecto: usa MAIL_DEFAULT_SENDER, o la cuenta SMTP si está disponible
-MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
-
-app = Flask(__name__)  # app Flask
-# Clave secreta para sesiones; en producción debe venir de una variable segura
-=======
 # Este archivo es el servidor Flask principal de la aplicación.
 # Define rutas, gestiona la base de datos MongoDB y envía correos para recuperación de contraseña.
 
@@ -49,17 +24,11 @@ MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 
 
 # Inicializa la aplicación Flask y la clave secreta para sesiones.
 app = Flask(__name__)
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 logging.basicConfig(level=logging.INFO)  # configurar logging en INFO
 
-<<<<<<< HEAD
-# Connect to MongoDB Atlas
-client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)  # inicializa cliente MongoDB
-=======
 # Conectar a MongoDB Atlas y verificar la conexión.
 client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
 try:
     # Intento rápido para comprobar conexión
     client.admin.command('ping')
@@ -76,11 +45,7 @@ def get_db():
 
 # Helpers pequeños para normalizar y parsear etiquetas desde un campo CSV.
 def normalize_tag(value):
-<<<<<<< HEAD
-    # Normaliza una etiqueta: trim, lowercase, colapsa múltiples espacios
-=======
     # Quita espacios extra y convierte todo a minúsculas.
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
     return ' '.join(value.strip().lower().split())
 
 def parse_tags(value):
@@ -116,11 +81,7 @@ def send_email(subject, sender, recipients, body):
             logging.exception('Fallo al enviar correo: %s', e)
             return False
     else:
-<<<<<<< HEAD
-        # Si no hay SMTP configurado, imprimimos en logs (útil en desarrollo)
-=======
         # No hay SMTP configurado, así que se imprime el correo en la consola.
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
         logging.info('Simulating email (SMTP not configured). To enable, set MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD.')
         logging.info('To: %s', recipients)
         logging.info('Subject: %s', subject)
@@ -199,17 +160,10 @@ def crear_chiste():
         contenido = request.form.get('contenido', '').strip()
         etiquetas = parse_tags(request.form.get('etiquetas', ''))
         if not contenido or not etiquetas:
-<<<<<<< HEAD
-            # Volver a mostrar el formulario con error y las etiquetas disponibles
-            return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=etiquetas_actuales)
-
-        # Guardar/asegurar etiquetas en colección `etiquetas`
-=======
 
             # Si falta contenido o etiquetas, se vuelve a mostrar el formulario con error.
             return render_template('crear_chiste.html', error='Contenido y etiquetas requeridos.', etiquetas=etiquetas_actuales)
 
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
         for t in etiquetas:
             # Asegura que cada etiqueta exista en la colección de etiquetas.
             db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
@@ -257,11 +211,7 @@ def tus_chistes():
         action = request.form.get('action')
         chiste_id = request.form.get('chiste_id')
         if action == 'delete':
-<<<<<<< HEAD
-            # Borrar solo si el autor coincide
-=======
             # Elimina solo si el chiste pertenece al usuario.
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
             db.chistes.delete_one({'_id': chiste_id, 'autor_id': user_id})
         elif action == 'update':
             # Actualizar contenido y etiquetas
@@ -297,11 +247,7 @@ def recuperar_contrasena():
             body += 'Usa este enlace para cambiar tu contraseña:\n' + reset_url + '\n\n'
             body += 'Si no lo solicitaste, ignora este mensaje.'
             send_email('Restablece tu contraseña', MAIL_DEFAULT_SENDER, email, body)
-<<<<<<< HEAD
-        # Mostrar página que instruye al usuario a revisar su correo (independiente de si el email existía)
-=======
         # Mostrar página que indica al usuario revisar su correo, incluso si no existe el email.
->>>>>>> cd138e3c0e0cc406068fb159c469af43bedc3d7e
         return render_template('esperar_correo.html', email=email)
     # GET -> mostrar formulario para solicitar recuperación
     return render_template('recuperar.html')
