@@ -193,6 +193,15 @@ def ver_chistes_negros():
     return render_template('ver_chistes_negros.html', chistes=chistes, etiquetas=etiquetas, search=q, selected_tag=tag)
 
 
+@app.route('/humor_negro')
+def humor_negro():
+    """Vista alternativa que muestra la página de 'Humor negro' y lista los chistes."""
+    db = get_db()
+    chistes = list(db.chistes.find({'tipo_humor': 'Negro'}).sort('creado_en', -1))
+    etiquetas = [e['nombre'] for e in db.etiquetas.find().sort('nombre', 1)]
+    return render_template('umor negro .html', chistes=chistes, etiquetas=etiquetas)
+
+
 @app.route('/tus_chistes', methods=['GET', 'POST'])
 def tus_chistes():
     if 'usuario_id' not in session:

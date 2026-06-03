@@ -15,6 +15,41 @@
 					<a href="/crear_chiste" class="btn btn-outline-light">Crear un chiste</a>
 				</div>
 
+				{% if chistes is defined and chistes|length > 0 %}
+					<div class="mt-4">
+						<h3 class="text-white mb-3">Últimos chistes de humor negro</h3>
+						<div class="row g-4">
+							{% for chiste in chistes %}
+								<div class="col-lg-6">
+									<div class="card bg-secondary bg-opacity-10 border border-danger h-100">
+										<div class="card-body">
+											<div class="d-flex justify-content-between gap-3 mb-3">
+												<span class="badge bg-danger">{{ chiste.tipo_humor }}</span>
+												<small class="text-white-50">{{ chiste.creado_en }}</small>
+											</div>
+
+											<p class="text-white mb-4" style="white-space: pre-line;">{{ chiste.contenido }}</p>
+
+											<div>
+												<p class="text-white-50 mb-2">Etiquetas</p>
+												{% if chiste.temas %}
+													<div class="d-flex flex-wrap gap-2">
+														{% for tema in chiste.temas %}
+															<span class="badge bg-light text-dark">{{ tema }}</span>
+														{% endfor %}
+													</div>
+												{% else %}
+													<p class="text-white-50 mb-0">Sin etiquetas</p>
+												{% endif %}
+											</div>
+										</div>
+									</div>
+								</div>
+							{% endfor %}
+						</div>
+					</div>
+				{% endif %}
+
 				<div class="mt-4">
 					<h5 class="text-white-50">Consejos</h5>
 					<ul class="text-light">
