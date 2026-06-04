@@ -6,6 +6,8 @@ import os
 import secrets
 from datetime import datetime, timedelta
 import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import logging
 from pymongo import MongoClient
 
@@ -95,30 +97,51 @@ def allowed_file(filename):
 
 
 def send_email(subject, sender, recipients, body):
-    """Envía correo usando SMTP o simula el envío cuando no está configurado."""
+    """Envía correo usando SMTP con soporte UTF-8."""
     if not isinstance(recipients, (list, tuple)):
         recipients = [recipients]
 
+    logging.info('=== Iniciando envío de correo ===')
+    logging.info('MAIL_SERVER: %s', MAIL_SERVER)
+    logging.info('MAIL_USERNAME: %s', MAIL_USERNAME)
+    logging.info('Destinatarios: %s', recipients)
+    logging.info('Remitente: %s', sender)
+
     if MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD:
         try:
+            logging.info('Conectando a SMTP...')
             server = smtplib.SMTP(MAIL_SERVER, MAIL_PORT, timeout=10)
             server.ehlo()
             server.starttls()
+            server.ehlo()
+            logging.info('Iniciando sesión...')
             server.login(MAIL_USERNAME, MAIL_PASSWORD)
-            message = f"Subject: {subject}\nFrom: {sender}\nTo: {', '.join(recipients)}\n\n{body}"
-            server.sendmail(sender, recipients, message)
+            
+            # Crear mensaje MIME con soporte UTF-8
+            msg = MIMEMultipart()
+            msg['Subject'] = subject
+            msg['From'] = sender
+            msg['To'] = ', '.join(recipients)
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            logging.info('Enviando mensaje...')
+            server.sendmail(sender, recipients, msg.as_string())
             server.quit()
-            logging.info('Correo enviado a %s', recipients)
+            logging.info('✓ Correo enviado exitosamente a %s', recipients)
             return True
         except Exception as e:
-            logging.exception('Fallo al enviar correo: %s', e)
+            logging.error('✗ Error al enviar correo: %s', str(e), exc_info=True)
             return False
-
-    logging.info('SMTP no está configurado. Se simula el envío de correo.')
-    logging.info('To: %s', recipients)
-    logging.info('Subject: %s', subject)
-    logging.info('%s', body)
-    return True
+    else:
+        logging.warning('SMTP no está completamente configurado.')
+        logging.warning('MAIL_SERVER: %s, MAIL_USERNAME: %s, MAIL_PASSWORD configurada: %s', 
+                       MAIL_SERVER, MAIL_USERNAME, bool(MAIL_PASSWORD))
+        logging.info('Se simula el envío de correo.')
+        logging.info('To: %s', recipients)
+        logging.info('From: %s', sender)
+        logging.info('Subject: %s', subject)
+        logging.info('Body:\n%s', body)
+        return True
 
 
 @app.route('/')
@@ -283,7 +306,8 @@ def tus_chistes():
 
 
 def generate_reset_token():
-    return secrets.token_urlsafe(32)
+    """Genera un token seguro y URL-safe para resetear contraseña."""
+    return secrets.token_hex(32)
 
 
 @app.route('/recuperar', methods=['GET', 'POST'])
