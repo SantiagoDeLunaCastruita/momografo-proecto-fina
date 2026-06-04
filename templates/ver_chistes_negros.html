@@ -59,12 +59,11 @@
 							</small>
 						</div>
 
-						<p class="text-white mb-4" style="white-space: pre-line;">{{ chiste.contenido }}</p>
-
-						<div class="mb-3">
-							<p class="text-white-50 mb-1">Creado por</p>
-							<p class="text-white mb-0">{{ chiste.autor_nombre or 'Usuario desconocido' }}</p>
-						</div>
+                        {% if chiste.imagen %}
+                            <div class="mb-3 text-center">
+                                <img src="{{ url_for('static', filename='uploads/' ~ chiste.imagen) }}" class="img-fluid rounded" alt="Imagen del chiste">
+                            </div>
+                        {% endif %}
 
 						<div>
 							<p class="text-white-50 mb-2">Etiquetas</p>

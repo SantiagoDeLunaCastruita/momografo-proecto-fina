@@ -1,4 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv, find_dotenv
+import certifi
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -7,27 +10,37 @@ import logging
 from pymongo import MongoClient
 
 
+dotenv_path = find_dotenv()
+if dotenv_path:
+    load_dotenv(dotenv_path)
+else:
+    load_dotenv()
+
 # Configuración de conexión a MongoDB.
 # Usa la variable de entorno MONGODB_URI; si no existe, conserva la cadena de Atlas
 # para evitar que MongoClient caiga en el valor por defecto de localhost.
 MONGODB_URI = os.environ.get(
     'MONGODB_URI',
-    'mongodb+srv://Said_Ramirez:NfT1w9CGzgETVGuV@escuela.5rt7g7m.mongodb.net/?appName=Escuela'
+    'mongodb+srv://24308060610637_db_user:YOUR_PASSWORD@delunacastruitasantiago.xqqk3yd.mongodb.net/gestor_tareas?retryWrites=true&w=majority'
 )
+MONGODB_DATABASE = os.environ.get('MONGODB_DATABASE', 'gestor_tareas')
 
 # Configuración de correo SMTP para recuperación de contraseña.
 MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
 MAIL_USERNAME = os.environ.get('MAIL_USERNAME', 'fruterialospapus@gmail.com')
 MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', 'vdsb uadx wkzu rukg')
-MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'no-reply@example.com'
+MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME or 'no-reply@example.com'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4 MB máximo por archivo
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 
 # Inicializa el cliente MongoDB.
-client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
 try:
     client.admin.command('ping')
     logging.info('Conectado a MongoDB.')
@@ -38,7 +51,7 @@ except Exception as e:
 
 def get_db():
     """Devuelve la base de datos de la aplicación."""
-    return client['gestor_tareas']
+    return client[MONGODB_DATABASE]
 
 
 def normalize_tag(value):
@@ -74,6 +87,11 @@ def normalize_chistes_for_render(chistes):
         if 'creado_en' in chiste:
             chiste['creado_en'] = parse_iso_datetime(chiste.get('creado_en'))
     return chistes
+
+
+def allowed_file(filename):
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 
 def send_email(subject, sender, recipients, body):
@@ -167,10 +185,20 @@ def crear_chiste():
         for t in etiquetas:
             db.etiquetas.update_one({'nombre': t}, {'$setOnInsert': {'nombre': t}}, upsert=True)
 
+        file = request.files.get('imagen')
+        imagen_nombre = None
+        if file and file.filename:
+            if allowed_file(file.filename):
+                extension = os.path.splitext(secure_filename(file.filename))[1].lower()
+                imagen_nombre = secrets.token_hex(16) + extension
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], imagen_nombre))
+
         # Normalizar el tipo de humor para consistencia.
         tipo_humor = request.form.get('tipo_humor', 'General').strip()
         
         chiste = {
+            'imagen': imagen_nombre,
             '_id': secrets.token_hex(16),
             'contenido': contenido,
             'tipo_humor': tipo_humor,
@@ -261,7 +289,10 @@ def generate_reset_token():
 @app.route('/recuperar', methods=['GET', 'POST'])
 def recuperar_contrasena():
     if request.method == 'POST':
-        email = request.form.get('email')
+        email = (request.form.get('email') or '').strip().lower()
+        if not email:
+            return render_template('recuperar.html', error='Ingresa un correo electrónico válido.')
+
         db = get_db()
         user = db.usuarios.find_one({'email': email})
         if user:
@@ -273,6 +304,8 @@ def recuperar_contrasena():
             body += 'Usa este enlace para cambiar tu contraseña:\n' + reset_url + '\n\n'
             body += 'Si no lo solicitaste, ignora este mensaje.'
             send_email('Restablece tu contraseña', MAIL_DEFAULT_SENDER, email, body)
+
+        # Siempre mostramos la misma respuesta para no revelar si el correo existe.
         return render_template('esperar_correo.html', email=email)
     return render_template('recuperar.html')
 
@@ -282,10 +315,17 @@ def reset_password(token):
     db = get_db()
     user = db.usuarios.find_one({'reset_token': token})
     if user is None:
-        return 'Enlace no válido o expirado.'
-    expire = datetime.fromisoformat(user.get('reset_expire'))
+        return render_template('recuperar.html', error='Enlace no válido o expirado. Solicita el restablecimiento nuevamente.')
+
+    expire_value = user.get('reset_expire')
+    try:
+        expire = datetime.fromisoformat(expire_value)
+    except Exception:
+        return render_template('recuperar.html', error='Enlace inválido. Solicita el restablecimiento nuevamente.')
+
     if datetime.utcnow() > expire:
-        return 'El enlace ha expirado.'
+        return render_template('recuperar.html', error='El enlace ha expirado. Solicita un nuevo correo de recuperación.')
+
     if request.method == 'POST':
         new_password = request.form.get('password')
         confirm = request.form.get('confirm')
@@ -293,7 +333,10 @@ def reset_password(token):
             return render_template('cambiar_contra.html', email=user.get('email'), error='Rellena ambos campos.')
         if new_password != confirm:
             return render_template('cambiar_contra.html', email=user.get('email'), error='Las contraseñas no coinciden.')
-        db.usuarios.update_one({'_id': user.get('_id')}, {'$set': {'password': new_password}, '$unset': {'reset_token': '', 'reset_expire': ''}})
+        db.usuarios.update_one(
+            {'_id': user.get('_id')},
+            {'$set': {'password': new_password}, '$unset': {'reset_token': '', 'reset_expire': ''}}
+        )
         return redirect(url_for('index'))
     return render_template('cambiar_contra.html', email=user.get('email'))
 

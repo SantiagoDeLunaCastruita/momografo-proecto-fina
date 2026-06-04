@@ -70,6 +70,12 @@
                             </small>
                         </div>
 
+                        {% if chiste.imagen %}
+                            <div class="mb-3 text-center">
+                                <img src="{{ url_for('static', filename='uploads/' ~ chiste.imagen) }}" class="img-fluid rounded" alt="Imagen del chiste">
+                            </div>
+                        {% endif %}
+
                         <p class="text-white mb-4" style="white-space: pre-line;">{{ chiste.contenido }}</p>
 
                         <div class="mb-3">

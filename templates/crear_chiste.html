@@ -17,10 +17,16 @@
                     </div>
                 {% endif %}
 
-                <form method="POST" action="/crear_chiste">
+                <form method="POST" action="/crear_chiste" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="contenido" class="form-label text-light">Chiste</label>
                         <textarea id="contenido" name="contenido" class="form-control bg-dark text-white border-secondary" rows="5" placeholder="Escribe tu chiste aquí" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="imagen" class="form-label text-light">Imagen opcional</label>
+                        <input id="imagen" name="imagen" type="file" accept="image/*" class="form-control bg-dark text-white border-secondary">
+                        <div class="form-text text-white-50">Sube una imagen para acompañar el chiste (opcional).</div>
                     </div>
 
                     <div class="mb-3">

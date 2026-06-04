@@ -35,6 +35,12 @@
                             </small>
                         </div>
 
+                        {% if chiste.imagen %}
+                            <div class="mb-3 text-center">
+                                <img src="{{ url_for('static', filename='uploads/' ~ chiste.imagen) }}" class="img-fluid rounded mb-3" alt="Imagen del chiste">
+                            </div>
+                        {% endif %}
+
                         <form method="POST" action="/tus_chistes">
                             <input type="hidden" name="chiste_id" value="{{ chiste._id }}">
 

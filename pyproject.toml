@@ -10,6 +10,7 @@ dependencies = [
     "pymongo>=4.6.0",
     "pyngrok>=8.1.2",
     "python-dotenv>=1.0.0",
+    "certifi>=2024.0.0",
 ]
 
 [tool.uv.workspace]
